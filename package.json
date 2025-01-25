@@ -1,0 +1,20 @@
+{
+  "name": "starknet-polling-bot",
+  "version": "1.0.0",
+  "description": "A Discord bot for creating and managing polls on the starknet blockchain",
+  "main": "dist/index.js",
+  "author": "Elli610",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@types/node": "^20.11.0",
+    "@types/sqlite3": "^3.1.11",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.7",
+    "sqlite3": "^5.1.7",
+    "typescript": "^5.3.3"
+  }
+}
