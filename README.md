@@ -11,3 +11,5 @@ An onChain Private opinion polling Bot for discord and telegram using the Starkn
 - Run `yarn start` to start the bot in production mode.
 
 Don't forget to invite the bot in your discord server using the following link: `https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=8`
+
+> To deploy the bot commands on discord, run `ts-node src/deploy-commands.ts`.

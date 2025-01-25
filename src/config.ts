@@ -20,7 +20,7 @@ interface Config {
 export const config: Config = {
   // Bot configuration
   token: process.env.DISCORD_TOKEN || 'YOUR_BOT_TOKEN',
-  clientId: process.env.CLIENT_ID || 'YOUR_CLIENT_ID',
+  clientId: process.env.DISCORD_CLIENT_ID || 'YOUR_DISCORD_CLIENT_ID',
 
   // Database configuration
   database: {
