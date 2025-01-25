@@ -1,15 +1,13 @@
 import { Client, Events, Interaction, CommandInteraction } from 'discord.js';
-import { createPollCommand, handlePollButton } from './createPoll';
+import { createPollCommand, handlePollButton } from './pollManager';
 
 export function registerCommands(client: Client): void {
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-    console.log('Interaction received:', interaction);
     try {
       // Handle slash commands
       if (interaction.isCommand()) {
         switch (interaction.commandName) {
           case 'createpoll':
-            console.log('createpoll command');
             await createPollCommand(interaction as CommandInteraction);
             break;
         }

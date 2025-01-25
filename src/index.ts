@@ -18,6 +18,4 @@ client.once(Events.ClientReady, () => {
   registerCommands(client);
 });
 
-console.log("token: ", botConfig.token);
-
 client.login(botConfig.token);
