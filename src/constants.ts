@@ -1,0 +1,1 @@
+export const STARKNET_LOGO_URL = 'https://www.starknet.io/wp-content/uploads/2024/05/SN-Symbol-Flat-colour-150x150.png';

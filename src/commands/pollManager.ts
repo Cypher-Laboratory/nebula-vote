@@ -7,6 +7,7 @@ import {
   EmbedBuilder
 } from 'discord.js';
 import { getDb } from '../database';
+import { STARKNET_LOGO_URL } from '../constants';
 
 export const createPollCommand = async (interaction: CommandInteraction) => {
   try {
@@ -29,80 +30,136 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     let pollId: number;
 
     // Create poll in database
-    try {
-      const result = await new Promise<number>((resolve, reject) => {
-        db.serialize(() => {
-          db.run('BEGIN TRANSACTION');
+    // Create poll in database
+try {
+  const result = await new Promise<number>((resolve, reject) => {
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
 
-          db.run(
-            `INSERT INTO polls (guild_id, channel_id, creator_id, question, end_time) 
+      db.run(
+        `INSERT INTO polls (guild_id, channel_id, creator_id, question, end_time) 
          VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' minutes'))`,
-            [
-              interaction.guildId,
-              interaction.channelId,
-              interaction.user.id,
-              question,
-              duration.toString()
-            ],
-            function (err) {
-              if (err) {
-                db.run('ROLLBACK');
-                reject(err);
-                return;
-              }
+        [
+          interaction.guildId,
+          interaction.channelId,
+          interaction.user.id,
+          question,
+          duration.toString()
+        ],
+        function (err) {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
 
-              const pollId = this.lastID;
-              let insertPromises = optionsArray.map((option) => {
-                return new Promise<void>((resolveOption, rejectOption) => {
-                  db.run(
-                    'INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)',
-                    [pollId, option],
-                    (err) => {
-                      if (err) {
-                        rejectOption(err);
-                      } else {
-                        resolveOption();
-                      }
-                    }
-                  );
-                });
-              });
+          const pollId = this.lastID;
+          console.log('Created poll with ID:', pollId);
+          console.log('Inserting options:', optionsArray);
 
-              Promise.all(insertPromises)
-                .then(() => {
-                  db.run('COMMIT', (err) => {
-                    if (err) {
-                      db.run('ROLLBACK');
-                      reject(err);
+          let insertPromises = optionsArray.map((option) => {
+            return new Promise<void>((resolveOption, rejectOption) => {
+              db.run(
+                'INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)',
+                [pollId, option],
+                (err) => {
+                  if (err) {
+                    console.error('Error inserting option:', option, err);
+                    rejectOption(err);
+                  } else {
+                    console.log('Successfully inserted option:', option);
+                    resolveOption();
+                  }
+                }
+              );
+            });
+          });
+
+          Promise.all(insertPromises)
+            .then(() => {
+              // Verify all options were inserted correctly
+              db.all(
+                `SELECT id, option_text
+                 FROM poll_options
+                 WHERE poll_id = ?
+                 ORDER BY id ASC`,
+                [pollId],
+                (err, results) => {
+                  if (err) {
+                    console.error('Error verifying options:', err);
+                    db.run('ROLLBACK');
+                    reject(err);
+                  } else {
+                    console.log('All inserted options:', results);
+                    if (results.length === optionsArray.length) {
+                      db.run('COMMIT', (err) => {
+                        if (err) {
+                          console.error('Error committing transaction:', err);
+                          db.run('ROLLBACK');
+                          reject(err);
+                        } else {
+                          console.log('Successfully committed transaction');
+                          resolve(pollId);
+                        }
+                      });
                     } else {
-                      resolve(pollId);
+                      console.error('Not all options were inserted:', {
+                        expected: optionsArray.length,
+                        actual: results.length
+                      });
+                      db.run('ROLLBACK');
+                      reject(new Error('Not all options were inserted'));
                     }
-                  });
-                })
-                .catch((err) => {
-                  db.run('ROLLBACK');
-                  reject(err);
-                });
-            }
-          );
-        });
-      });
+                  }
+                }
+              );
+            })
+            .catch((err) => {
+              console.error('Error in promise.all:', err);
+              db.run('ROLLBACK');
+              reject(err);
+            });
+        }
+      );
+    });
+  });
 
-      pollId = result;
-    } catch (error) {
-      console.error('Database error:', error);
-      await interaction.editReply({
-        content: 'An error occurred while creating the poll in the database.',
-      });
-      return;
-    }
+  pollId = result;
+  
+  // Verify the poll was created successfully
+  const verifyOptions = await new Promise((resolve, reject) => {
+    db.all(
+      `SELECT id, option_text
+       FROM poll_options
+       WHERE poll_id = ?
+       ORDER BY id ASC`,
+      [pollId],
+      (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      }
+    );
+  });
+  
+  console.log('Final verification of options:', verifyOptions);
+
+} catch (error) {
+  console.error('Database error:', error);
+  await interaction.editReply({
+    content: 'An error occurred while creating the poll in the database.',
+  });
+  return;
+}
 
     // Create embed for the poll
     const pollEmbed = new EmbedBuilder()
       .setTitle(question)
       .setDescription('Click a button below to vote!')
       .setColor('#00ff00')
-      .setFooter({ text: `Poll ID: ${pollId} • Ends in ${duration} minutes` });
+      .setFooter({
+        text: `Poll ID: ${pollId} • Ends in ${duration} minutes • Powered by Starknet`,
+        iconURL: STARKNET_LOGO_URL
+      });
 
     // Create button rows (max 5 buttons per row)
     const rows: ActionRowBuilder<ButtonBuilder>[] = [];
@@ -153,7 +210,10 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
           .setTitle(`${question} (Ended)`)
           .setDescription(formatResults(results as any[]))
           .setColor('#ff0000')
-          .setFooter({ text: `Poll ID: ${pollId} • Poll has ended` });
+          .setFooter({
+            text: `Poll ID: ${pollId} • Poll has ended • Powered by Starknet`,
+            iconURL: STARKNET_LOGO_URL
+          });
 
         await interaction.editReply({
           embeds: [finalEmbed],
@@ -212,7 +272,6 @@ async function getPollResults(pollId: number) {
   console.log('Results:', await result);
   return result;
 }
-
 export const handlePollButton = async (interaction: ButtonInteraction) => {
   try {
     const [action, pollId, optionIndex] = interaction.customId.split('_');
@@ -240,21 +299,41 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
 
     if (action === 'vote') {
       console.log('Vote action:', pollId, optionIndex);
-      console.log("interaction: ", interaction);
 
-      // Get option ID
+      // Get all options for the poll first (for debugging)
+      const allOptions = await new Promise((resolve, reject) => {
+        db.all(
+          `SELECT id, option_text 
+           FROM poll_options 
+           WHERE poll_id = ?`,
+          [pollId],
+          (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          }
+        );
+      });
+      console.log('Available options:', allOptions);
+
+      // Get the specific option
       const option = await new Promise((resolve, reject) => {
         db.get(
-          'SELECT id FROM poll_options WHERE poll_id = ? AND rowid = ?',
-          [pollId, Number(optionIndex) + 1],
+          `SELECT id, option_text 
+           FROM poll_options 
+           WHERE poll_id = ? 
+           ORDER BY id ASC
+           LIMIT 1 OFFSET ?`,
+          [pollId, Number(optionIndex)],
           (err, result) => {
             if (err) reject(err);
             else resolve(result);
           }
         );
       });
+      console.log('Selected option:', option);
 
       if (!option) {
+        console.log('No option found for index:', optionIndex);
         await interaction.reply({
           content: 'Invalid option selected.',
           ephemeral: true
@@ -264,12 +343,23 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
 
       // Record vote
       await new Promise<void>((resolve, reject) => {
+        console.log('Recording vote:', {
+          pollId,
+          optionId: (option as any).id,
+          userId: interaction.user.id
+        });
+        
         db.run(
           'INSERT OR REPLACE INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
           [pollId, (option as any).id, interaction.user.id],
           (err) => {
-            if (err) reject(err);
-            else resolve();
+            if (err) {
+              console.error('Error recording vote:', err);
+              reject(err);
+            } else {
+              console.log('Vote recorded successfully');
+              resolve();
+            }
           }
         );
       });
@@ -286,7 +376,10 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         .setTitle('Current Results')
         .setDescription(formatResults(results as any[]))
         .setColor('#0099ff')
-        .setFooter({ text: `Poll ID: ${pollId}` });
+        .setFooter({
+          text: `Poll ID: ${pollId} • Powered by Starknet`,
+          iconURL: STARKNET_LOGO_URL
+        });
 
       await interaction.reply({
         embeds: [resultsEmbed],
