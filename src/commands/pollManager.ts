@@ -55,7 +55,7 @@ try {
 
           const pollId = this.lastID;
           console.log('Created poll with ID:', pollId);
-          console.log('Inserting options:', optionsArray);
+          // console.log('Inserting options:', optionsArray);
 
           let insertPromises = optionsArray.map((option) => {
             return new Promise<void>((resolveOption, rejectOption) => {
@@ -64,10 +64,10 @@ try {
                 [pollId, option],
                 (err) => {
                   if (err) {
-                    console.error('Error inserting option:', option, err);
+                    // console.error('Error inserting option:', option, err);
                     rejectOption(err);
                   } else {
-                    console.log('Successfully inserted option:', option);
+                    // console.log('Successfully inserted option:', option);
                     resolveOption();
                   }
                 }
@@ -98,7 +98,6 @@ try {
                           db.run('ROLLBACK');
                           reject(err);
                         } else {
-                          console.log('Successfully committed transaction');
                           resolve(pollId);
                         }
                       });
@@ -125,24 +124,6 @@ try {
   });
 
   pollId = result;
-  
-  // Verify the poll was created successfully
-  const verifyOptions = await new Promise((resolve, reject) => {
-    db.all(
-      `SELECT id, option_text
-       FROM poll_options
-       WHERE poll_id = ?
-       ORDER BY id ASC`,
-      [pollId],
-      (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
-      }
-    );
-  });
-  
-  console.log('Final verification of options:', verifyOptions);
-
 } catch (error) {
   console.error('Database error:', error);
   await interaction.editReply({
@@ -249,7 +230,6 @@ function formatResults(results: any[]): string {
 
 // Helper function to get poll results
 async function getPollResults(pollId: number) {
-  console.log('Getting results for poll:', pollId);
   let result = new Promise((resolve, reject) => {
     const db = getDb();
     db.all(
@@ -269,7 +249,6 @@ async function getPollResults(pollId: number) {
     );
   });
 
-  console.log('Results:', await result);
   return result;
 }
 export const handlePollButton = async (interaction: ButtonInteraction) => {
@@ -298,8 +277,6 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     }
 
     if (action === 'vote') {
-      console.log('Vote action:', pollId, optionIndex);
-
       // Get all options for the poll first (for debugging)
       const allOptions = await new Promise((resolve, reject) => {
         db.all(
@@ -313,7 +290,6 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           }
         );
       });
-      console.log('Available options:', allOptions);
 
       // Get the specific option
       const option = await new Promise((resolve, reject) => {
@@ -357,7 +333,6 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
               console.error('Error recording vote:', err);
               reject(err);
             } else {
-              console.log('Vote recorded successfully');
               resolve();
             }
           }
