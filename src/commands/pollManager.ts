@@ -8,10 +8,20 @@ import {
 } from 'discord.js';
 import { getDb } from '../database';
 import { STARKNET_LOGO_URL } from '../constants';
+import { checkPollRateLimit, checkVoteRateLimit, getRemainingLimits } from '../rateLimiter';
 
 export const createPollCommand = async (interaction: CommandInteraction) => {
   try {
     await interaction.deferReply();
+
+    const canCreatePoll = await checkPollRateLimit();
+    if (!canCreatePoll) {
+      const { globalPolls } = getRemainingLimits(interaction.user.id);
+      await interaction.editReply({
+        content: `Rate limit exceeded for poll creation. Please try again later. ${globalPolls} polls remaining in this window.`,
+      });
+      return;
+    }
 
     const question = interaction.options.get('question')?.value as string;
     const options = interaction.options.get('options')?.value as string;
@@ -31,106 +41,106 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
 
     // Create poll in database
     // Create poll in database
-try {
-  const result = await new Promise<number>((resolve, reject) => {
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
+    try {
+      const result = await new Promise<number>((resolve, reject) => {
+        db.serialize(() => {
+          db.run('BEGIN TRANSACTION');
 
-      db.run(
-        `INSERT INTO polls (guild_id, channel_id, creator_id, question, end_time) 
+          db.run(
+            `INSERT INTO polls (guild_id, channel_id, creator_id, question, end_time) 
          VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' minutes'))`,
-        [
-          interaction.guildId,
-          interaction.channelId,
-          interaction.user.id,
-          question,
-          duration.toString()
-        ],
-        function (err) {
-          if (err) {
-            db.run('ROLLBACK');
-            reject(err);
-            return;
-          }
+            [
+              interaction.guildId,
+              interaction.channelId,
+              interaction.user.id,
+              question,
+              duration.toString()
+            ],
+            function (err) {
+              if (err) {
+                db.run('ROLLBACK');
+                reject(err);
+                return;
+              }
 
-          const pollId = this.lastID;
-          console.log('Created poll with ID:', pollId);
-          // console.log('Inserting options:', optionsArray);
+              const pollId = this.lastID;
+              console.log('Created poll with ID:', pollId);
+              // console.log('Inserting options:', optionsArray);
 
-          let insertPromises = optionsArray.map((option) => {
-            return new Promise<void>((resolveOption, rejectOption) => {
-              db.run(
-                'INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)',
-                [pollId, option],
-                (err) => {
-                  if (err) {
-                    // console.error('Error inserting option:', option, err);
-                    rejectOption(err);
-                  } else {
-                    // console.log('Successfully inserted option:', option);
-                    resolveOption();
-                  }
-                }
-              );
-            });
-          });
+              let insertPromises = optionsArray.map((option) => {
+                return new Promise<void>((resolveOption, rejectOption) => {
+                  db.run(
+                    'INSERT INTO poll_options (poll_id, option_text) VALUES (?, ?)',
+                    [pollId, option],
+                    (err) => {
+                      if (err) {
+                        // console.error('Error inserting option:', option, err);
+                        rejectOption(err);
+                      } else {
+                        // console.log('Successfully inserted option:', option);
+                        resolveOption();
+                      }
+                    }
+                  );
+                });
+              });
 
-          Promise.all(insertPromises)
-            .then(() => {
-              // Verify all options were inserted correctly
-              db.all(
-                `SELECT id, option_text
+              Promise.all(insertPromises)
+                .then(() => {
+                  // Verify all options were inserted correctly
+                  db.all(
+                    `SELECT id, option_text
                  FROM poll_options
                  WHERE poll_id = ?
                  ORDER BY id ASC`,
-                [pollId],
-                (err, results) => {
-                  if (err) {
-                    console.error('Error verifying options:', err);
-                    db.run('ROLLBACK');
-                    reject(err);
-                  } else {
-                    console.log('All inserted options:', results);
-                    if (results.length === optionsArray.length) {
-                      db.run('COMMIT', (err) => {
-                        if (err) {
-                          console.error('Error committing transaction:', err);
-                          db.run('ROLLBACK');
-                          reject(err);
+                    [pollId],
+                    (err, results) => {
+                      if (err) {
+                        console.error('Error verifying options:', err);
+                        db.run('ROLLBACK');
+                        reject(err);
+                      } else {
+                        console.log('All inserted options:', results);
+                        if (results.length === optionsArray.length) {
+                          db.run('COMMIT', (err) => {
+                            if (err) {
+                              console.error('Error committing transaction:', err);
+                              db.run('ROLLBACK');
+                              reject(err);
+                            } else {
+                              resolve(pollId);
+                            }
+                          });
                         } else {
-                          resolve(pollId);
+                          console.error('Not all options were inserted:', {
+                            expected: optionsArray.length,
+                            actual: results.length
+                          });
+                          db.run('ROLLBACK');
+                          reject(new Error('Not all options were inserted'));
                         }
-                      });
-                    } else {
-                      console.error('Not all options were inserted:', {
-                        expected: optionsArray.length,
-                        actual: results.length
-                      });
-                      db.run('ROLLBACK');
-                      reject(new Error('Not all options were inserted'));
+                      }
                     }
-                  }
-                }
-              );
-            })
-            .catch((err) => {
-              console.error('Error in promise.all:', err);
-              db.run('ROLLBACK');
-              reject(err);
-            });
-        }
-      );
-    });
-  });
+                  );
+                })
+                .catch((err) => {
+                  console.error('Error in promise.all:', err);
+                  db.run('ROLLBACK');
+                  reject(err);
+                });
+            }
+          );
+        });
+      });
 
-  pollId = result;
-} catch (error) {
-  console.error('Database error:', error);
-  await interaction.editReply({
-    content: 'An error occurred while creating the poll in the database.',
-  });
-  return;
-}
+      pollId = result;
+    } catch (error) {
+      console.error('Database error:', error);
+      await interaction.editReply({
+        content: 'An error occurred while creating the poll in the database.',
+      });
+      return;
+    }
 
     // Create embed for the poll
     const pollEmbed = new EmbedBuilder()
@@ -277,19 +287,19 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     }
 
     if (action === 'vote') {
-      // Get all options for the poll first (for debugging)
-      const allOptions = await new Promise((resolve, reject) => {
-        db.all(
-          `SELECT id, option_text 
-           FROM poll_options 
-           WHERE poll_id = ?`,
-          [pollId],
-          (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          }
-        );
-      });
+      // Check vote rate limit
+      const canVote = await checkVoteRateLimit(interaction.user.id);
+      if (!canVote) {
+        const { userVotes } = getRemainingLimits(interaction.user.id);
+
+        const errorMessage = userVotes === 0 ? `⚠️ You exceeded you rate limit, please wait a few minutes` : `⚠️ Bot is under heavy load. Please try again is a few minutes.`
+
+        await interaction.reply({
+          content: errorMessage,
+          ephemeral: true
+        });
+        return;
+      }
 
       // Get the specific option
       const option = await new Promise((resolve, reject) => {
@@ -324,7 +334,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           optionId: (option as any).id,
           userId: interaction.user.id
         });
-        
+
         db.run(
           'INSERT OR REPLACE INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
           [pollId, (option as any).id, interaction.user.id],
@@ -340,11 +350,12 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       });
 
       await interaction.reply({
-        content: 'Your vote has been recorded!',
+        content: `🗳️ Your vote has been recorded!`,
         ephemeral: true
       });
 
     } else if (action === 'results') {
+      // View results doesn't count against rate limit
       const results = await getPollResults(Number(pollId));
 
       const resultsEmbed = new EmbedBuilder()
