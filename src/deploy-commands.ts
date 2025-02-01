@@ -1,9 +1,10 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { config } from './config';
+import { data as infoCommand } from './commands/info';
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('createpoll')
+    .setName('poll')
     .setDescription('Create a new poll with multiple options')
     .addStringOption(option =>
       option
@@ -37,6 +38,7 @@ const commands = [
           { name: '1 month', value: 43200 },
         )
     ),
+  infoCommand
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(config.token);
