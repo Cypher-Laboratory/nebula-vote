@@ -326,8 +326,8 @@ const formatDurationLeft = (duration: number): string => {
   const seconds = duration % 60;
 
   if (days > 0) return `${days}d ${hours % 24}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes % 20}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
 
   return `${duration}s`;
 };
