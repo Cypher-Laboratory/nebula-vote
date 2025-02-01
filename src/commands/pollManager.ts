@@ -65,7 +65,6 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
 
               const pollId = this.lastID;
               console.log('Created poll with ID:', pollId);
-              // console.log('Inserting options:', optionsArray);
 
               let insertPromises = optionsArray.map((option) => {
                 return new Promise<void>((resolveOption, rejectOption) => {
@@ -261,6 +260,78 @@ async function getPollResults(pollId: number) {
 
   return result;
 }
+
+// Add this helper function to get user's current vote
+async function getUserVote(pollId: number, userId: string): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.get(
+      `SELECT po.option_text
+       FROM votes v
+       JOIN poll_options po ON v.option_id = po.id
+       WHERE v.poll_id = ? AND v.user_id = ?`,
+      [pollId, userId],
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(result ? (result as any).option_text : null);
+      }
+    );
+  });
+}
+
+// Helper function to create poll embed with user vote
+async function createPollEmbed(
+  question: string,
+  pollId: number,
+  duration: number, // seconds
+  userId: string,
+  isActive: boolean = true
+): Promise<EmbedBuilder> {
+  const userVote = await getUserVote(pollId, userId);
+
+  const embed = new EmbedBuilder()
+    .setTitle(question)
+    .setDescription(
+      userVote
+        ? `Click a button below to vote!\n\n👉 Your current vote: **${userVote}**`
+        : 'Click a button below to vote!'
+    )
+    .setColor(isActive ? '#00ff00' : '#ff0000');
+
+  if (isActive) {
+    embed.setFooter({
+      text: `Poll ID: ${pollId} • Ends in ${formatDurationLeft(duration)} • Powered by Starknet`,
+      iconURL: STARKNET_LOGO_URL
+    });
+  } else {
+    embed.setFooter({
+      text: `Poll ID: ${pollId} • Poll has ended • Powered by Starknet`,
+      iconURL: STARKNET_LOGO_URL
+    });
+  }
+
+  return embed;
+}
+
+/**
+ * convert a duration in seconds to a human-readable format
+ * 
+ * @param duration - duration in seconds
+ * @returns - formatted duration string
+ */
+const formatDurationLeft = (duration: number): string => {
+  const days = Math.floor(duration / (3600 * 24));
+  const hours = Math.floor(duration / 3600);
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+
+  if (days > 0) return `${days}d ${hours % 24}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+
+  return `${duration}s`;
+};
+
 export const handlePollButton = async (interaction: ButtonInteraction) => {
   try {
     const [action, pollId, optionIndex] = interaction.customId.split('_');
@@ -287,13 +358,13 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     }
 
     if (action === 'vote') {
-      // Check vote rate limit
+      // Rate limit check
       const canVote = await checkVoteRateLimit(interaction.user.id);
       if (!canVote) {
         const { userVotes } = getRemainingLimits(interaction.user.id);
-
-        const errorMessage = userVotes === 0 ? `⚠️ You exceeded you rate limit, please wait a few minutes` : `⚠️ Bot is under heavy load. Please try again is a few minutes.`
-
+        const errorMessage = userVotes === 0
+          ? `⚠️ You exceeded your rate limit, please wait a few minutes`
+          : `⚠️ Bot is under heavy load. Please try again in a few minutes.`;
         await interaction.reply({
           content: errorMessage,
           ephemeral: true
@@ -301,7 +372,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         return;
       }
 
-      // Get the specific option
+      // Get the option and record vote (existing code)
       const option = await new Promise((resolve, reject) => {
         db.get(
           `SELECT id, option_text 
@@ -316,10 +387,8 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           }
         );
       });
-      console.log('Selected option:', option);
 
       if (!option) {
-        console.log('No option found for index:', optionIndex);
         await interaction.reply({
           content: 'Invalid option selected.',
           ephemeral: true
@@ -329,24 +398,43 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
 
       // Record vote
       await new Promise<void>((resolve, reject) => {
-        console.log('Recording vote:', {
-          pollId,
-          optionId: (option as any).id,
-          userId: interaction.user.id
-        });
-
         db.run(
           'INSERT OR REPLACE INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
           [pollId, (option as any).id, interaction.user.id],
           (err) => {
-            if (err) {
-              console.error('Error recording vote:', err);
-              reject(err);
-            } else {
-              resolve();
-            }
+            if (err) reject(err);
+            else resolve();
           }
         );
+      });
+
+      // Get time left for the poll
+      const timeLeft = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT strftime('%s', end_time) - strftime('%s', 'now') as time_left
+           FROM polls
+           WHERE id = ?`,
+          [pollId],
+          (err, result) => {
+            if (err) reject(err);
+            else resolve(result ? (result as any).time_left : 0);
+          }
+        );
+      }) as number;
+
+      // Update the poll embed with the new vote
+      const updatedEmbed = await createPollEmbed(
+        (poll as any).question,
+        Number(pollId),
+        timeLeft,
+        interaction.user.id
+      );
+
+      // Get the original message
+      const message = await interaction.message.fetch();
+      await message.edit({
+        embeds: [updatedEmbed],
+        components: message.components
       });
 
       await interaction.reply({
@@ -355,12 +443,16 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       });
 
     } else if (action === 'results') {
-      // View results doesn't count against rate limit
       const results = await getPollResults(Number(pollId));
+      const userVote = await getUserVote(Number(pollId), interaction.user.id);
 
       const resultsEmbed = new EmbedBuilder()
         .setTitle('Current Results')
-        .setDescription(formatResults(results as any[]))
+        .setDescription(
+          userVote
+            ? `${formatResults(results as any[])}\n\n👉 Your current vote: **${userVote}**`
+            : formatResults(results as any[])
+        )
         .setColor('#0099ff')
         .setFooter({
           text: `Poll ID: ${pollId} • Powered by Starknet`,
