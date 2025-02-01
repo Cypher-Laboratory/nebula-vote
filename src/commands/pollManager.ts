@@ -36,7 +36,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
       return;
     }
 
-    if (optionsArray.length > 20) {
+    if (optionsArray.length > (Number(process.env.MAX_POLL_OPTIONS) || 20)) {
       await interaction.editReply({
         content: 'You can provide a maximum of 20 options for the poll.',
       });
