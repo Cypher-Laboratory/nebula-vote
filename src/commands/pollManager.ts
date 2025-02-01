@@ -40,7 +40,6 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     let pollId: number;
 
     // Create poll in database
-    // Create poll in database
     try {
       const result = await new Promise<number>((resolve, reject) => {
         db.serialize(() => {
@@ -142,14 +141,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     }
 
     // Create embed for the poll
-    const pollEmbed = new EmbedBuilder()
-      .setTitle(question)
-      .setDescription('Click a button below to vote!')
-      .setColor('#00ff00')
-      .setFooter({
-        text: `Poll ID: ${pollId} • Ends in ${duration} minutes • Powered by Starknet`,
-        iconURL: STARKNET_LOGO_URL
-      });
+    const pollEmbed = await createPollEmbed(question, pollId, duration * 60, interaction.user.id, true);
 
     // Create button rows (max 5 buttons per row)
     const rows: ActionRowBuilder<ButtonBuilder>[] = [];
@@ -325,8 +317,10 @@ const formatDurationLeft = (duration: number): string => {
   const minutes = Math.floor(duration / 60);
   const seconds = duration % 60;
 
+
+
   if (days > 0) return `${days}d ${hours % 24}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes % 20}m`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
   if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
 
   return `${duration}s`;
