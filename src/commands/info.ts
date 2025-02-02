@@ -7,12 +7,12 @@ import { STARKNET_LOGO_URL } from '../constants';
 
 export const data = new SlashCommandBuilder()
   .setName('info')
-  .setDescription('Learn about the StarkNet Polling Bot and how to use it');
+  .setDescription('Learn about the Starknet Polling Bot and how to use it');
 
 export const execute = async (interaction: CommandInteraction) => {
   try {
     const embed = new EmbedBuilder()
-      .setTitle('📊 StarkNet Polling Bot')
+      .setTitle('📊 Starknet Polling Bot')
       .setColor('#0099ff')
       .setDescription('A powerful on-chain polling bot that lets you create and manage private, verifiable polls in your Discord server!')
       .addFields(
@@ -26,7 +26,7 @@ export const execute = async (interaction: CommandInteraction) => {
         },
         {
           name: '⛓️ On-Chain Features',
-          value: '• All polls and votes are recorded on StarkNet\n• Complete traceability and transparency\n• Results accessible via smart contracts\n• Enables anonymous reward distribution to voters\n• Perfect for DAOs and community governance'
+          value: '• All polls and votes are recorded on Starknet\n• Complete traceability and transparency\n• Results accessible via smart contracts\n• Enables anonymous reward distribution to voters\n• Perfect for DAOs and community governance'
         },
         {
           name: '📝 Basic Usage',
@@ -42,7 +42,7 @@ export const execute = async (interaction: CommandInteraction) => {
         }        
       )
       .setFooter({
-        text: 'Powered by StarkNet & Alice\'s Ring',
+        text: 'Powered by Starknet & Alice\'s Ring',
         iconURL: STARKNET_LOGO_URL
       });
 
@@ -57,19 +57,3 @@ export const execute = async (interaction: CommandInteraction) => {
 };
 
 
-// {
-//   name: '⚡ Features',
-//   value: '• Up to 20 options per poll\n• Real-time vote tracking\n• Progress bars for visual results\n• Private vote verification\n• Rate limiting to prevent spam\n• Smart contract integration'
-// },
-// {
-//   name: '🔗 Smart Contract Integration',
-//   value: 'All poll data is accessible on-chain, enabling:\n• Automatic reward distribution to voters\n• Integration with other DApps\n• Verifiable voting history\n• Privacy-preserving analytics'
-// },
-// {
-//   name: '💡 Example Polls',
-//   value: '1. DAO Governance:\n`/poll question:"Should we allocate 1000 tokens to marketing?" options:"Yes,No,Need more info" duration:10080`\n\n2. Community feedback:\n`/poll question:"Which feature should we prioritize?" options:"Mobile App,Desktop Widget,Browser Extension" duration:2880`'
-// },
-// {
-//   name: '⏱️ Duration Tips',
-//   value: 'Duration is specified in minutes:\n• 60 = 1 hour\n• 1440 = 24 hours\n• 10080 = 1 week'
-// },

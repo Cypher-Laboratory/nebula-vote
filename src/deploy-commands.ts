@@ -1,6 +1,7 @@
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { config } from './config';
 import { data as infoCommand } from './commands/info';
+import { data as helpCommand } from './commands/help';
 
 const commands = [
   new SlashCommandBuilder()
@@ -38,7 +39,8 @@ const commands = [
           { name: '1 month', value: 43200 },
         )
     ),
-  infoCommand
+  infoCommand,
+  helpCommand
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(config.token);
