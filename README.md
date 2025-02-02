@@ -77,6 +77,7 @@ yarn start # automatically runs the deploy-commands script
 To use the bot from Cypher Lab, you can invite it to your Discord server using the following link:
 ```
 https://discord.com/oauth2/authorize?client_id=1332644824029069322&scope=bot&permissions=8
+https://discord.com/oauth2/authorize?client_id=1332644824029069322
 ```
 
 
