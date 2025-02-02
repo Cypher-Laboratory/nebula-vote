@@ -373,7 +373,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         return;
       }
 
-      // Get the option and record vote (existing code)
+      // Get the option and record vote
       const option = await new Promise((resolve, reject) => {
         db.get(
           `SELECT id, option_text 
@@ -431,17 +431,33 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         interaction.user.id
       );
 
-      // Get the original message
-      const message = await interaction.message.fetch();
-      await message.edit({
-        embeds: [updatedEmbed],
-        components: message.components
-      });
+      try {
+        // First, fetch the channel if needed
+        const channel = await interaction.client.channels.fetch(interaction.channelId);
+        if (!channel?.isTextBased()) {
+          throw new Error('Channel is not text-based');
+        }
 
-      await interaction.reply({
-        content: `🗳️ Your vote has been recorded!`,
-        ephemeral: true
-      });
+        // Then fetch the message
+        const message = await channel.messages.fetch(interaction.message.id);
+        
+        // Update the message
+        await message.edit({
+          embeds: [updatedEmbed],
+          components: message.components
+        });
+
+        await interaction.reply({
+          content: `🗳️ Your vote has been recorded!`,
+          ephemeral: true
+        });
+      } catch (error) {
+        console.error('Error updating message:', error);
+        await interaction.reply({
+          content: '🗳️ Your vote has been recorded, but the display couldn\'t be updated. The results are still accurate!',
+          ephemeral: true
+        });
+      }
 
     } else if (action === 'results') {
       const results = await getPollResults(Number(pollId));
@@ -468,7 +484,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
   } catch (error) {
     console.error('Error handling poll interaction:', error);
     await interaction.reply({
-      content: 'An error occurred while processing your request.',
+      content: 'An error occurred while processing your request. Your vote may still have been recorded.',
       ephemeral: true
     });
   }
