@@ -77,7 +77,7 @@ export const execute = async (interaction: CommandInteraction) => {
       const help = commandHelp[specificCommand as keyof typeof commandHelp];
       const embed = new EmbedBuilder()
         .setTitle(help.title)
-        .setColor('#0099ff')
+        .setColor('#0C0C4F')
         .setDescription(help.description + '\n\n**Usage:**\n' + help.usage);
 
       help.fields.forEach(field => embed.addFields(field));
@@ -92,7 +92,7 @@ export const execute = async (interaction: CommandInteraction) => {
       // Show general help
       const embed = new EmbedBuilder()
         .setTitle('❓ Starknet Polling Bot Help')
-        .setColor('#0099ff')
+        .setColor('#0C0C4F')
         .setDescription('Welcome to the Starknet Polling Bot! Here are the available commands:')
         .addFields(
           {
