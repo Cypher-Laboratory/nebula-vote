@@ -105,7 +105,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
                         db.run('ROLLBACK');
                         reject(err);
                       } else {
-                        console.log('All inserted options:', results);
+                        // console.log('All inserted options:', results);
                         if (results.length === optionsArray.length) {
                           db.run('COMMIT', (err) => {
                             if (err) {
