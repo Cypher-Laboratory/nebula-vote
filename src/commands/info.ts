@@ -18,15 +18,15 @@ export const execute = async (interaction: CommandInteraction) => {
       .addFields(
         {
           name: '🤔 What can this bot do?',
-          value: '• Create private, on-chain polls with multiple options\n• Vote anonymously using ring signatures\n• View real-time poll results without compromising voter privacy\n• Set custom durations for polls\n• See your current vote on active polls'
+          value: '• Create private, on-chain polls with multiple options\n• Poll privately using ring signatures\n• View real-time poll results without compromising voter privacy\n• Set custom durations for polls\n• See your current vote on active polls'
         },
         {
           name: '🔒 Privacy & Security',
-          value: '• Complete voter privacy using Ring Signatures\n• Votes are anonymous but verifiable\n• Prevents double-voting while maintaining anonymity\n• Built on [Alice\'s Ring cryptographic library](https://docs.alicesring.com/)'
+          value: '• Complete voter privacy using Ring Signatures\n• Votes are privately but verifiable\n• Prevents double-voting while maintaining anonymity\n• Built on [Alice\'s Ring cryptographic library](https://docs.alicesring.com/)'
         },
         {
           name: '⛓️ On-Chain Features',
-          value: '• All polls and votes are recorded on Starknet\n• Complete traceability and transparency\n• Results accessible via smart contracts\n• Enables anonymous reward distribution to voters\n• Perfect for DAOs and community governance'
+          value: '• All polls and votes are recorded on Starknet\n• Complete traceability and transparency\n• Results accessible via smart contracts\n• Enables private reward distribution to voters\n• Perfect for DAOs and community governance'
         },
         {
           name: '📝 Basic Usage',

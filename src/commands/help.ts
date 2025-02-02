@@ -23,7 +23,7 @@ export const data = new SlashCommandBuilder()
 const commandHelp = {
   createpoll: {
     title: '📊 Create Poll Command Help',
-    description: 'Create an anonymous, on-chain poll with multiple options.',
+    description: 'Create a private, on-chain poll with multiple options.',
     usage: '`/poll question:"Your question" options:"Option1,Option2,Option3" duration:1440`',
     fields: [
       {
@@ -32,11 +32,11 @@ const commandHelp = {
       },
       {
         name: '🔒 Privacy Features',
-        value: '• Uses Ring Signatures for anonymous voting\n• Prevents double voting while maintaining privacy\n• Vote verification without identity disclosure'
+        value: '• Uses Ring Signatures for private polling\n• Prevents double voting while maintaining privacy\n• Vote verification without identity disclosure'
       },
       {
         name: '⛓️ Blockchain Integration',
-        value: '• All votes are recorded on Starknet\n• Results accessible via smart contracts\n• Enables anonymous reward distribution'
+        value: '• All votes are recorded on Starknet\n• Results accessible via smart contracts\n• Enables private reward distribution'
       },
       {
         name: '⚠️ Limitations',
@@ -97,7 +97,7 @@ export const execute = async (interaction: CommandInteraction) => {
         .addFields(
           {
             name: '📊 /createpoll',
-            value: 'Create an anonymous, on-chain poll\nUsage: `/help command:poll` for details'
+            value: 'Create a private, on-chain poll\nUsage: `/help command:poll` for details'
           },
           {
             name: 'ℹ️ /info',

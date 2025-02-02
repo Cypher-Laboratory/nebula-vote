@@ -1,12 +1,12 @@
 # StarkNet Opinion Polling Bot
 
-An on-chain private opinion polling bot for Discord and Telegram using the StarkNet blockchain and Ring Signatures. Create anonymous, verifiable polls with cryptographic privacy guarantees.
+An on-chain private opinion polling bot for Discord and Telegram using the StarkNet blockchain and Ring Signatures. Create private, verifiable polls with cryptographic privacy guarantees.
 
 ## 🌟 Features
 
 ### Privacy & Security
 - Complete voter privacy using Ring Signatures from Alice's Ring library
-- Anonymous but verifiable voting
+- Private but verifiable voting
 - Double-voting prevention while maintaining anonymity
 - Cryptographically secure vote tracking
 
@@ -14,7 +14,7 @@ An on-chain private opinion polling bot for Discord and Telegram using the Stark
 - All polls and votes are recorded on StarkNet blockchain
 - Complete traceability and transparency
 - Results accessible via smart contracts
-- Anonymous reward distribution to voters
+- Private reward distribution to voters
 - Perfect for DAOs and community governance
 
 ### User Experience
@@ -80,7 +80,7 @@ https://discord.com/oauth2/authorize?client_id=1332644824029069322&permissions=7
 ```
 
 
-Use this link to invite the bot (replace `YOUR_CLIENT_ID` with your Discord application client ID):
+Use this link to invite your custom bot (replace `YOUR_CLIENT_ID` with your Discord application client ID):
 ```
 https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=76800&scope=bot%20applications.commands
 ```
@@ -90,7 +90,7 @@ https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=76800&
 ### Available Commands
 
 #### /poll
-Create a new anonymous poll
+Create a new private poll
 ```
 /poll question:"What should we build next?" options:"DeFi,GameFi,Infrastructure" duration:1440
 ```
@@ -131,23 +131,12 @@ The bot uses Alice's Ring library for cryptographic privacy. Each vote is:
 - On-chain verifiable
 
 ### Smart Contract Integration
-- All poll data is recorded on StarkNet
+- All poll data is recorded on Starknet
 - Results can be accessed by other smart contracts
 - Enables privacy-preserving reward distribution
 - Maintains voter anonymity while ensuring vote integrity
 
 ## 🛠 Development
-
-### Project Structure
-```
-src/
-├── commands/         # Discord command implementations
-├── database/         # Database setup and queries
-├── constants.ts      # Shared constants
-├── deploy-commands.ts # Command deployment script
-├── index.ts          # Main entry point
-└── pollManager.ts    # Poll creation and management
-```
 
 ### Database Schema
 ```sql
@@ -184,4 +173,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [StarkNet](https://starknet.io/) - Layer 2 blockchain platform
 - [Alice's Ring](https://docs.alicesring.com/) - Ring signature cryptographic library
+- [Cypher Lab](https://cypherlab.org/) - Cypher Lab website
 - [Discord.js](https://discord.js.org/) - Discord bot framework
