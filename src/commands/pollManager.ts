@@ -295,7 +295,7 @@ async function createPollEmbed(
         ? `Click a button below to vote!\n\n👉 Your current vote: **${userVote}**`
         : 'Click a button below to vote!'
     )
-    .setColor(isActive ? '#0C0C4F' : '#EC796B');
+    .setColor(isActive ? '#E175B1' : '#EC796B');
 
   if (isActive) {
     embed.setFooter({
@@ -468,7 +468,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
             ? `${formatResults(results as any[])}\n\n👉 Your current vote: **${userVote}**`
             : formatResults(results as any[])
         )
-        .setColor('#0C0C4F')
+        .setColor('#E175B1')
         .setFooter({
           text: `Poll ID: ${pollId} • Powered by Starknet`,
           iconURL: STARKNET_LOGO_URL

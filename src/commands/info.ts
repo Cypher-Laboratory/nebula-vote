@@ -13,7 +13,7 @@ export const execute = async (interaction: CommandInteraction) => {
   try {
     const embed = new EmbedBuilder()
       .setTitle('📊 Starknet Polling Bot')
-      .setColor('#0C0C4F')
+      .setColor('#EC796B')
       .setDescription('A powerful on-chain polling bot that lets you create and manage private, verifiable polls in your Discord server!')
       .addFields(
         {
