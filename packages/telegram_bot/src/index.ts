@@ -1,6 +1,6 @@
 import { Telegraf, Context } from 'telegraf';
 import { message } from 'telegraf/filters';
-import { config } from './config';
+import { config, STARKNET_LOGO_URL } from './config';
 import { initializeDatabase } from './database';
 
 interface PollOption {
@@ -169,7 +169,9 @@ function formatPollMessage(poll: Poll): string {
     message += `${option.text}\n${bar} ${percentage}% (${option.votes} votes)\n\n`;
   });
 
-  message += `Total votes: ${totalVotes}`;
+  message += `Total votes: ${totalVotes}\n\n`;
+  // Add Starknet footer with logo
+  message += `<a href="${STARKNET_LOGO_URL}">&#8205;</a><i>Powered by Starknet</i>`;
   return message;
 }
 
