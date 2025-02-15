@@ -1,10 +1,22 @@
 import { Telegraf, Context } from 'telegraf';
 import { message } from 'telegraf/filters';
-import { Update } from 'telegraf/typings/core/types/typegram';
 import { config } from './config';
 import { initializeDatabase } from './database';
 
 const bot = new Telegraf(config.token);
+
+// Timestamp when the bot starts
+const startTimestamp = Date.now() / 1000;
+
+// Middleware to filter out old messages
+bot.use(async (ctx, next) => {
+  // Check if the update has a message and its timestamp
+  if (ctx.message?.date && ctx.message.date < startTimestamp) {
+    console.log('Skipping old message from:', new Date(ctx.message.date * 1000).toISOString());
+    return;
+  }
+  return next();
+});
 
 // Command handlers
 bot.command('ping', async (ctx) => {
@@ -36,55 +48,6 @@ bot.catch((err, ctx) => {
   ctx.reply('An error occurred, please try again.');
 });
 
-let isRunning = false;
-let offset = 0;
-const processedUpdates = new Set<number>();
-
-async function processUpdate(update: Update) {
-  // Check if we've already processed this update
-  if (processedUpdates.has(update.update_id)) {
-    return;
-  }
-
-  try {
-    await bot.handleUpdate(update);
-    // Add to processed set and maintain its size
-    processedUpdates.add(update.update_id);
-    if (processedUpdates.size > 100) {
-      const firstItem = processedUpdates.values().next().value;
-      if (firstItem !== undefined) {
-        processedUpdates.delete(firstItem);
-      }
-    }
-  } catch (error) {
-    console.error('Error processing update:', error);
-  }
-}
-
-async function getUpdates() {
-  if (!isRunning) return;
-
-  try {
-    const updates = await bot.telegram.getUpdates(offset, 100, 30, undefined);
-    
-    if (updates.length > 0) {
-      // Process updates and update offset
-      for (const update of updates) {
-        await processUpdate(update);
-        offset = update.update_id + 1;
-      }
-    }
-
-    // Continue polling
-    setTimeout(getUpdates, 1000);
-  } catch (error) {
-    console.error('Error getting updates:', error);
-    if (isRunning) {
-      setTimeout(getUpdates, 5000); // Retry after 5 seconds on error
-    }
-  }
-}
-
 // Helper function to format poll results
 function formatPollResults(results: any[]): string {
   if (!results.length) return 'No results available.';
@@ -107,36 +70,24 @@ async function main() {
   try {
     // Initialize database
     console.log('Initializing database...');
-    initializeDatabase();
+    await initializeDatabase();
     
     // Test connection
     console.log('Testing bot connection...');
     const botInfo = await bot.telegram.getMe();
     console.log('Bot info:', botInfo.username);
 
-    // Clear any pending updates before starting
-    const updates = await bot.telegram.getUpdates(0, 1, 0, undefined);
-    if (updates.length > 0) {
-      offset = updates[updates.length - 1].update_id + 1;
-    }
-
-    // Start polling
-    console.log('Starting bot polling...');
-    isRunning = true;
-    getUpdates();
-    
-    console.log('Bot is running!');
+    // Launch the bot
+    console.log('Starting bot...');
+    await bot.launch();
+    console.log(`Bot is running! (Start time: ${new Date(startTimestamp * 1000).toISOString()})`);
 
     // Enable graceful stop
     process.once('SIGINT', () => {
-      console.log('SIGINT received');
-      isRunning = false;
-      process.exit(0);
+      bot.stop('SIGINT');
     });
     process.once('SIGTERM', () => {
-      console.log('SIGTERM received');
-      isRunning = false;
-      process.exit(0);
+      bot.stop('SIGTERM');
     });
 
   } catch (error) {
