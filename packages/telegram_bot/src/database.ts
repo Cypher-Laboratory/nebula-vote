@@ -1,10 +1,11 @@
 import sqlite3 from 'sqlite3';
 import { Database } from 'sqlite3';
+import { config } from './config';
 
 let db: Database;
 
 export function initializeDatabase(): void {
-  db = new sqlite3.Database('polls.db');
+  db = new sqlite3.Database(config.database.filename);
   
   db.serialize(() => {
     // Create polls table
