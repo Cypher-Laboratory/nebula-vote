@@ -27,3 +27,4 @@ export const config: Config = {
 };
 
 export const STARKNET_LOGO_URL = 'https://www.starknet.io/wp-content/uploads/2024/05/SN-Symbol-Flat-colour-150x150.png';
+export const POWERED_BY_STARKNET = `<a href="${STARKNET_LOGO_URL}">​</a><i>Powered by Starknet</i>`;
