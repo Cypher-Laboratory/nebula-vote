@@ -44,6 +44,67 @@ export function initializeDatabase(): void {
         UNIQUE(poll_id, user_id)
       )
     `);
+
+    // Create authorized users table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS authorized_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        authorized_by TEXT NOT NULL,
+        authorized_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(chat_id, user_id)
+      )
+    `);
+  });
+}
+
+// Helper functions for authorization
+export async function isUserAuthorized(chatId: string, userId: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    db.get(
+      'SELECT 1 FROM authorized_users WHERE chat_id = ? AND user_id = ?',
+      [chatId, userId],
+      (err, row) => {
+        resolve(!!row);
+      }
+    );
+  });
+}
+
+export async function addAuthorizedUser(chatId: string, userId: string, authorizedBy: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    db.run(
+      'INSERT OR IGNORE INTO authorized_users (chat_id, user_id, authorized_by) VALUES (?, ?, ?)',
+      [chatId, userId, authorizedBy],
+      function(err) {
+        resolve(!err && this.changes > 0);
+      }
+    );
+  });
+}
+
+export async function removeAuthorizedUser(chatId: string, userId: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    db.run(
+      'DELETE FROM authorized_users WHERE chat_id = ? AND user_id = ?',
+      [chatId, userId],
+      function(err) {
+        resolve(!err && this.changes > 0);
+      }
+    );
+  });
+}
+
+export async function listAuthorizedUsers(chatId: string): Promise<Array<{user_id: string, authorized_by: string, authorized_at: string}>> {
+  return new Promise((resolve) => {
+    db.all(
+      'SELECT user_id, authorized_by, authorized_at FROM authorized_users WHERE chat_id = ?',
+      [chatId],
+      (err, rows) => {
+        resolve(rows as any || []);
+      }
+    );
   });
 }
 
