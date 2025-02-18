@@ -1,0 +1,21 @@
+[package]
+name = "starknet_private_pooling"
+version = "0.1.0"
+edition = "2023_11"
+
+[dependencies]
+starknet = "2.7.1"
+alices_ring_cairo_verifier = {git = "https://github.com/Cypher-Laboratory/Alice-s-Ring-Cairo-verifier.git"} 
+
+
+[dev-dependencies]
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.30.0" }
+
+[[target.starknet-contract]]
+sierra = true
+
+[cairo]
+sierra-replace-ids = false
+
+[scripts]
+test = "snforge test"
