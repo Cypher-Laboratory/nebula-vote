@@ -1,7 +1,6 @@
 use alices_ring_cairo_verifier::structType::RingSignature;
 use core::byte_array::ByteArray;
 
-
 struct Choice {
     title: ByteArray,
     vote_count: u256
@@ -18,8 +17,10 @@ trait IPoll<TContractState> {
 }
 
 #[starknet::contract]
-mod PollContract {
-    use starknet::storage::StoragePathEntry;
+mod NebulaVote {
+    use starknet::storage::StoragePointerReadAccess;
+use starknet::storage::StoragePointerWriteAccess;
+use starknet::storage::StoragePathEntry;
     use core::byte_array::ByteArray;
     use core::traits::Into;
     use core::array::SpanTrait;
