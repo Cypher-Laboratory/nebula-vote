@@ -92,7 +92,7 @@ Results show:
 Nebula Vote's privacy protections are powered by:
 
 ### Ring Signatures
-The bot uses Alice's Ring library for cryptographic privacy. Each vote is:
+The bot uses [Alice's Ring](https://github.com/Cypher-Laboratory/Alice-s-Ring/tree/main) library for cryptographic privacy. Each vote is:
 - Anonymous but verifiable
 - Protected against double-voting
 - Mathematically proven to be private

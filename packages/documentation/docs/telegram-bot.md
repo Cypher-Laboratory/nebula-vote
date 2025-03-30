@@ -5,7 +5,7 @@ This document provides comprehensive information about the Nebula Vote Telegram 
 # Features
 
 ### Privacy & Security
-- **Ring Signature Technology**: Uses Alice's Ring cryptographic library for true voter privacy
+- **Ring Signature Technology**: Uses [Alice's Ring](https://github.com/Cypher-Laboratory/Alice-s-Ring/tree/main) cryptographic library for true voter privacy
 - **Anonymous Voting**: No one can see who voted for what, not even the poll creator
 - **Double-Vote Prevention**: Each user can only vote once per poll, without compromising anonymity
 - **On-Chain Verification**: All votes are securely recorded on Starknet blockchain
@@ -110,7 +110,7 @@ When a poll expires, it will no longer accept votes, and the final results will 
 Nebula Vote's privacy protections are powered by:
 
 ### Ring Signatures
-The bot uses Alice's Ring library for cryptographic privacy. Each vote is:
+The bot uses [Alice's Ring](https://github.com/Cypher-Laboratory/Alice-s-Ring/tree/main) library for cryptographic privacy. Each vote is:
 - Anonymous but verifiable
 - Protected against double-voting
 - Mathematically proven to be private
