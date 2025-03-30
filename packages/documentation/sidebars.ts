@@ -25,6 +25,11 @@ const sidebars = {
         'developer-guide/telegram',
       ],
     },
+    {
+      type: 'doc',
+      id: 'architecture',
+      label: 'Architecture',
+    }
   ],
 };
 

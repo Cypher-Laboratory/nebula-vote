@@ -204,7 +204,7 @@ NebulaVote is built with:
 - **Discord.js** - Framework for interacting with Discord API
 - **SQLite** - Local database for storing poll information
 - **Starknet.js** - For blockchain interactions
-- **Alice's Ring** - Zero-knowledge cryptography library
+- **Alice's Ring** - Cryptography library
 
 The application follows a modular architecture with separate components for:
 - Command handling

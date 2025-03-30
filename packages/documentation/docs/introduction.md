@@ -10,7 +10,7 @@ Welcome to the Nebula Vote documentation! 🚀 Nebula Vote is a cutting-edge pla
 
 ## 🤔 What is Nebula Vote?
 
-Nebula Vote combines the power of zero-knowledge cryptography 🔐 with the accessibility of familiar messaging platforms to bring privacy-preserving polls to your communities.
+Nebula Vote combines the power of cryptography 🔐 with the accessibility of familiar messaging platforms to bring privacy-preserving polls to your communities.
 
 Our platform enables you to create and participate in polls where:
 - 🕵️‍♀️ Your identity remains private
@@ -23,7 +23,7 @@ Whether you're running a DAO, managing a community, or simply want to gather opi
 ## 🌟 Key Features
 
 ### 🔒 Privacy-First Design
-Built from the ground up with privacy as the core principle. All votes are submitted through zero-knowledge proofs, ensuring nobody—not even the poll creator—can see individual responses.
+Built from the ground up with privacy as the core principle. All votes are submitted using Ring Signatures, ensuring nobody—not even the poll creator—can see individual responses.
 
 ### 📊 Blockchain Verification
 Every poll and vote is recorded on the Starknet blockchain, ensuring immutability and transparency of the aggregated results without compromising individual privacy.
