@@ -15,6 +15,14 @@ version = "0.1.0"
 source = "git+https://github.com/keep-starknet-strange/garaga?rev=fa27403e6aa2c968a369c6da6ddfbd8da36a42f3#fa27403e6aa2c968a369c6da6ddfbd8da36a42f3"
 
 [[package]]
+name = "nebula_vote"
+version = "0.1.0"
+dependencies = [
+ "alices_ring_cairo_verifier",
+ "snforge_std",
+]
+
+[[package]]
 name = "snforge_scarb_plugin"
 version = "0.1.0"
 source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.30.0#196f06b251926697c3d66800f2a93ae595e76496"
@@ -25,12 +33,4 @@ version = "0.30.0"
 source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.30.0#196f06b251926697c3d66800f2a93ae595e76496"
 dependencies = [
  "snforge_scarb_plugin",
-]
-
-[[package]]
-name = "starknet_private_pooling"
-version = "0.1.0"
-dependencies = [
- "alices_ring_cairo_verifier",
- "snforge_std",
 ]
