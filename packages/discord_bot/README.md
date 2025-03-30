@@ -227,7 +227,7 @@ The application follows a modular architecture with separate components for:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nebulavote
+git clone https://github.com/Cypher-Laboratory/nebula-vote.git
 cd nebulavote
 ```
 
