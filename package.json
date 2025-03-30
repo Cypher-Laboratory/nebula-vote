@@ -1,8 +1,8 @@
 {
-  "name": "starknet-opinion-polling",
+  "name": "nebula-vote",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@github.com:Cypher-Laboratory/starknet-opinion-polling.git",
+  "repository": "git@github.com:Cypher-Laboratory/nebula-vote.git",
   "author": "Elli <nathan@cypherlab.org>",
   "license": "MIT",
   "private": true,
