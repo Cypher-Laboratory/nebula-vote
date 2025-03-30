@@ -8,5 +8,10 @@
   "private": true,
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "docs:dev": "yarn workspace @cypher-laboratory/nebula-vote-documentation start",
+    "docs:build": "yarn workspace @cypher-laboratory/nebula-vote-documentation build",
+    "docs:serve": "yarn workspace @cypher-laboratory/nebula-vote-documentation serve"
+  }
 }

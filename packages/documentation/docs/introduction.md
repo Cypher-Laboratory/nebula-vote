@@ -65,5 +65,12 @@ Nebula Vote is ideal for:
 - **🪙 Token-Gated Polls**: Exclusive voting for token holders _Soon_
 - **🤫 Sensitive Topics**: Voting on topics where privacy is paramount
 
+## 🙏 Acknowledgements
+
+### Starknet Support
+We extend our deepest gratitude to the [**Starknet Foundation**](https://www.starknet.org/) for their generous support and funding of this initiative. Their commitment to advancing privacy-preserving technologies on blockchain has been instrumental in bringing Nebula Vote to life. 
+
+This project showcases the potential of Starknet's infrastructure for building privacy-first applications that maintain transparency where it matters. Through their grants program and technical guidance, Starknet has enabled us to develop a solution that truly embodies the future of decentralized governance and community decision-making.
+
 ## Support
 If you need help or have questions not covered in the documentation, join our [🌐 Discord community](https://discord.gg/YpYquYTXsf) or contact us at [📧 contact@cypherlab.org](mailto:contact@cypherlab.org).
