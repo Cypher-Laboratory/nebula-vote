@@ -1,12 +1,17 @@
 {
-  "name": "starknet-opinion-polling",
+  "name": "nebula-vote",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@github.com:Cypher-Laboratory/starknet-opinion-polling.git",
+  "repository": "git@github.com:Cypher-Laboratory/nebula-vote.git",
   "author": "Elli <nathan@cypherlab.org>",
   "license": "MIT",
   "private": true,
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "docs:dev": "yarn workspace @cypher-laboratory/nebula-vote-documentation start",
+    "docs:build": "yarn workspace @cypher-laboratory/nebula-vote-documentation build",
+    "docs:serve": "yarn workspace @cypher-laboratory/nebula-vote-documentation serve"
+  }
 }

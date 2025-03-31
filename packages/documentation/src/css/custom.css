@@ -1,0 +1,146 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #1C1C84;  /* Cosmic Blue */
+  --ifm-color-primary-dark: #191976;
+  --ifm-color-primary-darker: #181870;
+  --ifm-color-primary-darkest: #13135C;
+  --ifm-color-primary-light: #1F1F92;
+  --ifm-color-primary-lighter: #2020A1;
+  --ifm-color-primary-lightest: #2F2FC2;
+  
+  --ifm-background-color: #ffffff;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  --nebula-space-magenta: #7F387A;
+  --nebula-solar-tangerine: #EC7965; 
+  --nebula-cosmic-coral: #E17581;
+  --nebula-galaxy-blue: #3FBCFF;
+  --nebula-horizon-blue: #8586FF;
+  --nebula-peach-flare: #F6C9CE;
+  --nebula-lavender-sky: #A1A106;
+  --nebula-lilac-stardust: #CDCDEB;
+  --nebula-space-blue: #C1F3FC;
+  --nebula-moon-green: #6985A3;
+  --nebula-boreal-green: #90EAC4;
+  --nebula-banana-star: #FBF2B1;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #3FBCFF;  /* Galaxy Blue */
+  --ifm-color-primary-dark: #26B3FF;
+  --ifm-color-primary-darker: #17ADFF;
+  --ifm-color-primary-darkest: #0092E0;
+  --ifm-color-primary-light: #58C5FF;
+  --ifm-color-primary-lighter: #70CCFF;
+  --ifm-color-primary-lightest: #A3DFFF;
+  
+  --ifm-background-color: #0C0C4F;  /* Dark Cosmic Blue */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient button styles */
+.button--nebula-gradient {
+  background: linear-gradient(45deg, #EC796B, #D672EF);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.button--nebula-gradient:hover {
+  background: linear-gradient(45deg, #D672EF, #EC796B);
+  box-shadow: 0 4px 12px rgba(236, 121, 107, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Custom card styles */
+.card--nebula {
+  border-radius: 12px;
+  border: 1px solid rgba(231, 118, 206, 0.2);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card--nebula:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  border-color: rgba(231, 118, 206, 0.5);
+}
+
+/* Hero section styles */
+.hero--nebula {
+  background: linear-gradient(135deg, var(--ifm-color-primary-darkest) 0%, #2F4482 100%);
+  color: white;
+}
+
+[data-theme='dark'] .hero--nebula {
+  background: linear-gradient(135deg, #0C0C4F 0%, #2F4482 100%);
+}
+
+/* Feature section styles */
+.features--nebula {
+  padding: 4rem 0;
+}
+
+/* Footer styles */
+.footer--dark {
+  --ifm-footer-background-color: #0C0C4F;
+}
+
+/* API Reference section styles */
+.api-method {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--ifm-color-primary);
+  background-color: rgba(28, 28, 132, 0.05);
+}
+
+[data-theme='dark'] .api-method {
+  background-color: rgba(63, 188, 255, 0.05);
+}
+
+/* Tabs styling */
+.tabs--nebula {
+  --ifm-tabs-color-active: var(--nebula-cosmic-coral);
+  --ifm-tabs-color: var(--ifm-color-primary);
+}
+
+[data-theme='dark'] .tabs--nebula {
+  --ifm-tabs-color-active: var(--nebula-cosmic-coral);
+  --ifm-tabs-color: var(--ifm-color-primary);
+}
+
+/* Add custom accent color for callouts and highlights */
+.accent-cosmic-coral {
+  color: var(--nebula-cosmic-coral);
+}
+
+.accent-galaxy-blue {
+  color: var(--nebula-galaxy-blue);
+}
+
+/* Add cool space animation for loading states */
+@keyframes pulse-nebula {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 118, 206, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(231, 118, 206, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 118, 206, 0);
+  }
+}
+
+.loading-nebula {
+  animation: pulse-nebula 2s infinite;
+}
