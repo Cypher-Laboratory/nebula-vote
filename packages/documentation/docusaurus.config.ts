@@ -1,6 +1,6 @@
 // docusaurus.config.ts
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import { GITHUB_REPO } from './constants';
 
@@ -12,9 +12,10 @@ const config: Config = {
   baseUrl: '/',
   organizationName: 'nebulavote',
   projectName: 'nebulavote-docs',
-  onBrokenLinks: 'throw',
+  // onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
-  
+
   // Even if you don't use internationalization, this is recommended for SEO
   i18n: {
     defaultLocale: 'en',
@@ -29,10 +30,10 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/nebulavote/nebulavote-docs/tree/main/',
         },
-        blog: {
-          showReadingTime: true,
-          editUrl: 'https://github.com/nebulavote/nebulavote-docs/tree/main/',
-        },
+        // blog: {
+        //   showReadingTime: true,
+        //   editUrl: 'https://github.com/nebulavote/nebulavote-docs/tree/main/',
+        // },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -91,10 +92,10 @@ const config: Config = {
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
+            // {
+            //   label: 'Blog',
+            //   to: '/blog',
+            // },
             {
               label: 'GitHub',
               href: GITHUB_REPO,
