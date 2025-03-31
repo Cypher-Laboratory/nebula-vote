@@ -42,12 +42,12 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/nebulavote-social-card.jpg',
+    // image: 'img/nebulavote-social-card.jpg',
     navbar: {
       title: 'Nebula Vote',
       logo: {
         alt: 'Nebula Vote Logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.png',
       },
       items: [
         {

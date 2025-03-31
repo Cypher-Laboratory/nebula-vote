@@ -24,13 +24,13 @@ function HomepageHeader() {
               </Link>
             </div>
           </div>
-          <div className={styles.heroGraphic}>
+          {/* <div className={styles.heroGraphic}>
             <img 
               src="/img/nebulavote-illustration.svg" 
               alt="Nebula Vote Illustration" 
               className={styles.heroImage} 
             />
-          </div>
+          </div> */}
         </div>
       </div>
     </header>
