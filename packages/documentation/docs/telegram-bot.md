@@ -21,13 +21,13 @@ This document provides comprehensive information about the Nebula Vote Telegram 
 
 ### Adding the Bot to Your Group
 
-1. **Find the Bot**: Search for "@Nebula VoteBot" in Telegram
+1. **Find the Bot**: Search for `@NebulaVote_bot` in Telegram
 2. **Start a Chat**: Click "Start" to initialize the bot in a private chat
 3. **Add to Group**: 
    - Open your Telegram group
    - Click the group name at the top
    - Select "Add members"
-   - Search for "@Nebula VoteBot" and add it
+   - Search for `@NebulaVote_bot` and add it
 
 4. **Set Permissions**: The bot requires permission to:
    - Read messages
