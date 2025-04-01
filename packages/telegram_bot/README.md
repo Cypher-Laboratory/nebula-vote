@@ -21,7 +21,7 @@ Nebula Vote is a Telegram bot that enables anonymous yet verifiable polling with
 
 ### For Users
 
-1. **Find the Bot**: Search for "@Nebula_VoteBot" in Telegram
+1. **Find the Bot**: Search for "@NebulaVote_bot" in Telegram
 2. **Start a Chat**: Click "Start" to initialize the bot in a private chat
 3. **Add to Group**: Add the bot to your Telegram group through the group settings
 
@@ -30,7 +30,7 @@ Nebula Vote is a Telegram bot that enables anonymous yet verifiable polling with
 ### Adding the Bot to Your Personal Chat
 
 1. Open Telegram and tap on the search icon
-2. Type "@Nebula_VoteBot" in the search bar
+2. Type "@NebulaVote_bot" in the search bar
 3. Select the bot from the search results
 4. Tap "Start" to begin interacting with the bot
 5. You'll receive a welcome message with basic instructions
@@ -41,7 +41,7 @@ Nebula Vote is a Telegram bot that enables anonymous yet verifiable polling with
    - Open your Telegram group
    - Tap the group name at the top to open group info
    - Select "Add members"
-   - Search for "@Nebula_VoteBot" 
+   - Search for "@NebulaVote_bot" 
    - Tap on the bot to add it to your group
 
 2. **Method 2: From Bot Chat**
