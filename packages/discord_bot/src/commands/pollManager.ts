@@ -339,7 +339,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     // Check if poll is still active
     const poll = await new Promise((resolve, reject) => {
       db.get(
-        'SELECT * FROM polls WHERE id = ? AND is_active = 1 AND datetime("now") < end_time',
+        'SELECT * FROM polls WHERE id = ? ', // AND is_active = 1 AND datetime("now") < end_time',
         [pollId],
         (err, result) => {
           if (err) reject(err);
@@ -348,13 +348,13 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       );
     });
 
-    if (!poll) {
-      await interaction.reply({
-        content: 'This poll has ended.',
-        ephemeral: true
-      });
-      return;
-    }
+    // if (!poll) {
+    //   await interaction.reply({
+    //     content: 'This poll has ended.',
+    //     ephemeral: true
+    //   });
+    //   return;
+    // }
 
     if (action === 'vote') {
       // Rate limit check
