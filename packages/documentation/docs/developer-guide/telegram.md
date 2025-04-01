@@ -87,6 +87,41 @@ yarn build
 yarn start
 ```
 
+### Creating Your Own Bot Instance with BotFather
+
+If you want to customize Nebula Vote or run your own instance, you'll need to create a new bot through Telegram's BotFather and run the bot on your server:
+
+1. **Start BotFather**:
+   - Open Telegram and search for "@BotFather"
+   - Start a chat and send `/start`
+
+2. **Create a New Bot**:
+   - Send `/newbot` to BotFather
+   - Provide a name for your bot (e.g., "My Nebula Vote")
+   - Provide a username for your bot (must end with "bot", e.g., "my_nebula_vote_bot")
+
+3. **Get Your Bot Token**:
+   - BotFather will generate a token for your bot
+   - This token should be kept private and secure
+   - Use this token in your `.env` file as `TELEGRAM_TOKEN`
+
+4. **Configure Bot Settings** (Optional):
+   - **Set Description**: `/setdescription` - Brief explanation of what your bot does
+   - **Set About Text**: `/setabouttext` - Short info displayed in the bot's profile
+   - **Set Profile Picture**: `/setuserpic` - Upload an image for your bot
+   - **Set Commands**: `/setcommands` - Define the command menu users will see
+     ```
+     start - Get started with the bot
+     createpoll - Create a new poll
+     help - View help information
+     ping - Check if the bot is running
+     ```
+
+5. **Enable Inline Mode** (Optional, if you want to allow polls in inline mode):
+   - Send `/setinline` to BotFather
+   - Select your bot
+   - Provide a placeholder text (e.g., "Create a new poll")
+
 ### Database Setup
 
 The bot automatically creates the necessary database tables on startup. The database schema is defined in `database.ts`:
