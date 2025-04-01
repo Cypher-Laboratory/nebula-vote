@@ -90,6 +90,13 @@ yarn start
 
 The bot automatically creates the necessary database tables on startup. The database schema is defined in `database.ts`.
 
+### Authentication & Permissions
+To use your bot in a Discord server, you need to:
+1. Create a new Discord application and bot in the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Grant the bot the necessary permissions (`applications.commands`, `message content`, etc.)
+3. Copy the bot token and client ID to the `.env` file
+4. Save the Discord invite link for your bot
+
 ## Core Components
 
 ### Command Structure
