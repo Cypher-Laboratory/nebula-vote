@@ -1,9 +1,6 @@
 import { RpcProvider, Account, Contract } from 'starknet';
-import {
-  Curve,
-  CurveName,
-  RingSignature,
-} from '@cypher-laboratory/starknet-sag';
+import { RingSignature } from '@cypher-laboratory/alicesring-sag-starknet';
+import { Curve, CurveName } from '@cypher-laboratory/ring-sig-utils';
 
 import { abi } from './abi';
 
@@ -98,7 +95,7 @@ export async function vote(
   const signature = RingSignature.sign(
     ring,
     signerPrivKey,
-    choiceId,
+    choiceId.toString(),
     SECP256K1
   );
 
@@ -106,7 +103,7 @@ export async function vote(
 
   const result = await contract.invoke(
     'vote',
-    [pollId, choiceId].concat(rsCallData),
+    [BigInt(pollId), BigInt(choiceId)].concat(rsCallData),
     {
       parseRequest: false,
     }
