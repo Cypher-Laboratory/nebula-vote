@@ -156,8 +156,7 @@ export async function handleVote(
   const poll = await new Promise((resolve, reject) => {
     db.get(
       `SELECT * FROM polls 
-       WHERE id = ? AND is_active = 1 
-       AND datetime('now') < datetime(end_time)`,
+       WHERE id = ?`,
       [pollId],
       (err, result) => {
         if (err) reject(err);
@@ -167,7 +166,7 @@ export async function handleVote(
   });
 
   if (!poll) {
-    return { success: false, message: 'This poll has ended or does not exist' };
+    return { success: false, message: 'This poll might not exist' };
   }
 
   // Get the selected option
