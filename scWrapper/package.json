@@ -1,0 +1,12 @@
+{
+  "name": "scWrapper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "starknet": "^6.24.1"
+  }
+}
