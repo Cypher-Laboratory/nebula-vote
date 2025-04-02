@@ -922,7 +922,7 @@ bot.on('callback_query', async (ctx) => {
         if (voteResult.success) {
           // Get updated poll results after successful vote
           const updatedResults = await getPollResults(Number(pollId));
-          
+
           // Update UI with new results
           const updatedKeyboard = {
             inline_keyboard: pollOptions.map((option, index) => ([{
@@ -930,7 +930,7 @@ bot.on('callback_query', async (ctx) => {
               callback_data: `vote:${pollId}:${index}`
             }]))
           };
-          
+
           await ctx.editMessageText(
             formatPollResults(updatedResults),
             {
@@ -938,10 +938,12 @@ bot.on('callback_query', async (ctx) => {
               reply_markup: updatedKeyboard
             }
           );
-          
+
           // Send a confirmation message with transaction details
           if (voteResult.tx_hash) {
-            await ctx.reply(
+            // mp the user to confirm the vote
+            await ctx.telegram.sendMessage(
+              userId, // The ID of the user who voted
               `✅ Your vote has been recorded!\n\n<a href="https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}">🔍 View on StarkScan</a>`,
               { parse_mode: 'HTML' }
             );
@@ -949,7 +951,7 @@ bot.on('callback_query', async (ctx) => {
         } else {
           // Vote failed
           await ctx.reply('❌ Failed to record your vote: ' + voteResult.message);
-          
+
           // Reset the UI
           const resetKeyboard = {
             inline_keyboard: pollOptions.map((option, index) => ([{
@@ -957,7 +959,7 @@ bot.on('callback_query', async (ctx) => {
               callback_data: `vote:${pollId}:${index}`
             }]))
           };
-          
+
           await ctx.editMessageText(
             formatPollResults(pollResults),
             {
@@ -969,10 +971,10 @@ bot.on('callback_query', async (ctx) => {
       })
       .catch(async (error) => {
         console.error('Background vote processing error:', error);
-        
+
         // Notify user of error
         await ctx.reply('❌ An error occurred while processing your vote. Please try again.');
-        
+
         // Reset the UI
         const resetKeyboard = {
           inline_keyboard: pollOptions.map((option, index) => ([{
@@ -980,7 +982,7 @@ bot.on('callback_query', async (ctx) => {
             callback_data: `vote:${pollId}:${index}`
           }]))
         };
-        
+
         await ctx.editMessageText(
           formatPollResults(pollResults),
           {
@@ -992,7 +994,7 @@ bot.on('callback_query', async (ctx) => {
 
   } catch (error) {
     console.error('Initial vote handling error:', error);
-    
+
     // Try to answer the callback query if it hasn't been answered yet
     try {
       await ctx.answerCbQuery('An error occurred. Please try again.');
