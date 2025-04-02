@@ -256,6 +256,7 @@
 
 // export { bot, startTimestamp };
 
+
 import { Telegraf, Context } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { Message } from 'telegraf/typings/core/types/typegram';
@@ -295,25 +296,6 @@ const bot = new Telegraf(config.token);
 // Timestamp when the bot starts
 const startTimestamp = Date.now() / 1000;
 
-// Cleanup expired polls periodically
-setInterval(async () => {
-  try {
-    const db = getDb();
-    db.run(
-      'UPDATE polls SET is_active = 0 WHERE is_active = 1 AND datetime(end_time) <= datetime("now")',
-      function (err) {
-        if (err) {
-          console.error('Error cleaning up expired polls:', err);
-        } else if (this.changes) {
-          console.log(`Deactivated ${this.changes} expired polls`);
-        }
-      }
-    );
-  } catch (error) {
-    console.error('Error in poll cleanup:', error);
-  }
-}, 60000); // Check every minute
-
 // Middleware to filter out old messages
 bot.use(async (ctx, next) => {
   if (ctx.message?.date && ctx.message.date < startTimestamp) {
@@ -321,25 +303,6 @@ bot.use(async (ctx, next) => {
     return;
   }
   return next();
-});
-
-// Command handlers
-bot.command('ping', async (ctx) => {
-  console.log('Received ping command');
-  await ctx.reply('pong!');
-});
-
-bot.command('start', async (ctx) => {
-  console.log('Received start command');
-  await ctx.reply(
-    'Welcome to the Poll Bot! 📊\n\n' +
-    'Use /createpoll to create a new poll.\n' +
-    'Format:\n' +
-    '/createpoll\n' +
-    'Your question\n' +
-    'Option 1, Option 2, Option 3\n' +
-    'Duration in minutes (optional, defaults to 15)'
-  );
 });
 
 // Create a new poll
@@ -379,19 +342,24 @@ async function createPoll(
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
 
+      // Insert the poll with tx_hash
       db.run(
         `INSERT INTO polls (
+          guild_id,
           channel_id,
           creator_id,
           question,
           end_time,
-          is_active
-        ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1)`,
+          is_active,
+          tx_hash
+        ) VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1, ?)`,
         [
+          ctx.chat?.id.toString(), // Using chat ID as guild_id too for simplicity
           ctx.chat?.id.toString(),
           ctx.from?.id.toString(),
           question,
           duration.toString(),
+          tx_hash // Store the transaction hash
         ],
         function (err) {
           if (err) {
@@ -426,7 +394,8 @@ async function createPoll(
                   question,
                   datetime(end_time) as end_time,
                   datetime(created_at) as created_at,
-                  is_active
+                  is_active,
+                  tx_hash
                 FROM polls WHERE id = ?`,
                 [pollId],
                 (err, poll) => {
@@ -473,7 +442,8 @@ async function handleVote(
   const poll = await new Promise((resolve, reject) => {
     db.get(
       `SELECT * FROM polls 
-       WHERE id = ? AND is_active = 1 AND datetime('now') < datetime(end_time)`,
+       WHERE id = ? AND is_active = 1 
+       AND datetime('now') < datetime(end_time)`,
       [pollId],
       (err, result) => {
         if (err) reject(err);
@@ -483,7 +453,7 @@ async function handleVote(
   });
 
   if (!poll) {
-    return { success: false, message: 'This poll might not exist or has expired' };
+    return { success: false, message: 'This poll might not exist or has ended' };
   }
 
   // Get the selected option
@@ -509,7 +479,7 @@ async function handleVote(
   // Check if user has already voted
   const existingVote = await new Promise((resolve, reject) => {
     db.get(
-      `SELECT 1 FROM votes 
+      `SELECT option_id FROM votes 
        WHERE poll_id = ? AND user_id = ?`,
       [pollId, ctx.from?.id],
       (err, result) => {
@@ -518,10 +488,6 @@ async function handleVote(
       }
     );
   });
-
-  if (existingVote) {
-    return { success: false, message: 'You have already voted in this poll!' };
-  }
 
   // Record the vote on starknet
   const signerPriv = getUserPrivateKey(ctx);
@@ -548,24 +514,27 @@ async function handleVote(
     return { success: false, message: 'Failed to get transaction hash' };
   }
 
-  // Record the vote
+  // Record or update the vote
   return new Promise((resolve, reject) => {
-    db.run(
-      `INSERT INTO votes (poll_id, option_id, user_id)
-       VALUES (?, ?, ?)`,
-      [pollId, (option as any).id, ctx.from?.id],
-      (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({
-            success: true,
-            message: 'Your vote has been recorded!',
-            tx_hash: tx_hash
-          });
-        }
+    const query = existingVote 
+      ? `UPDATE votes SET option_id = ?, tx_hash = ? WHERE poll_id = ? AND user_id = ?`
+      : `INSERT INTO votes (poll_id, option_id, user_id, tx_hash) VALUES (?, ?, ?, ?)`;
+    
+    const params = existingVote
+      ? [(option as any).id, tx_hash, pollId, ctx.from?.id]
+      : [pollId, (option as any).id, ctx.from?.id, tx_hash];
+    
+    db.run(query, params, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({
+          success: true,
+          message: existingVote ? 'Your vote has been updated!' : 'Your vote has been recorded!',
+          tx_hash: tx_hash
+        });
       }
-    );
+    });
   });
 }
 
@@ -580,7 +549,8 @@ async function getPollResults(pollId: number): Promise<PollResults> {
         `SELECT 
           question,
           datetime(end_time) as end_time,
-          is_active
+          is_active,
+          tx_hash
         FROM polls 
         WHERE id = ?`,
         [pollId],
@@ -634,11 +604,36 @@ async function getPollResults(pollId: number): Promise<PollResults> {
   });
 }
 
+// Get user's current vote
+async function getUserVote(
+  pollId: number,
+  userId: string
+): Promise<{ option_text: string; tx_hash?: string } | null> {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT po.option_text, v.tx_hash
+       FROM votes v
+       JOIN poll_options po ON v.option_id = po.id
+       WHERE v.poll_id = ? AND v.user_id = ?`,
+      [pollId, userId],
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(result ? { 
+          option_text: (result as any).option_text,
+          tx_hash: (result as any).tx_hash
+        } : null);
+      }
+    );
+  });
+}
+
 // Format poll results for display
 function formatPollResults(results: PollResults): string {
   const { question, options, total_votes, is_active, end_time, tx_hash } = results;
 
-  let output = `📊 <b>${question}</b>\n\n`;
+  let output = `📊 ${question}\n\n`;
 
   options.forEach(opt => {
     const percentage = total_votes ? ((opt.vote_count / total_votes) * 100).toFixed(1) : '0.0';
@@ -658,13 +653,99 @@ function formatPollResults(results: PollResults): string {
 
   // Add block explorer link if tx_hash is available
   if (tx_hash) {
-    output += `\n\n🔍 <a href="https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${tx_hash}">View on StarkScan</a>`;
+    output += `\n\n🔍 View on StarkScan: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${tx_hash}`;
   }
-
-  output += `\n\n${POWERED_BY_STARKNET}`;
 
   return output;
 }
+
+// End a poll
+async function endPoll(pollId: number): Promise<boolean> {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE polls SET is_active = 0 WHERE id = ?',
+      [pollId],
+      (err) => {
+        if (err) reject(err);
+        else resolve(true);
+      }
+    );
+  });
+}
+
+// Check if a poll exists and is active
+async function isPollActive(pollId: number): Promise<boolean> {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT 1 FROM polls 
+       WHERE id = ? AND is_active = 1 
+       AND datetime('now') < datetime(end_time)`,
+      [pollId],
+      (err, result) => {
+        if (err) reject(err);
+        else resolve(!!result);
+      }
+    );
+  });
+}
+
+// Get all active polls for a chat
+async function getActivePollsForChat(chatId: string): Promise<PollData[]> {
+  const db = getDb();
+
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT 
+        p.id,
+        p.question,
+        p.end_time,
+        p.created_at,
+        p.is_active,
+        p.tx_hash,
+        GROUP_CONCAT(po.option_text) as options
+      FROM polls p
+      JOIN poll_options po ON p.id = po.poll_id
+      WHERE p.channel_id = ? 
+      AND p.is_active = 1 
+      AND datetime('now') < datetime(p.end_time)
+      GROUP BY p.id`,
+      [chatId],
+      (err, polls) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(polls.map(poll => ({
+            ...(poll as any),
+            options: (poll as any).options.split(',')
+          })));
+        }
+      }
+    );
+  });
+}
+
+// Command handlers
+bot.command('ping', async (ctx) => {
+  console.log('Received ping command');
+  await ctx.reply('pong!');
+});
+
+bot.command('start', async (ctx) => {
+  console.log('Received start command');
+  await ctx.reply(
+    'Welcome to the Poll Bot! 📊\n\n' +
+    'Use /createpoll to create a new poll.\n' +
+    'Format:\n' +
+    '/createpoll\n' +
+    'Your question\n' +
+    'Option 1, Option 2, Option 3\n' +
+    'Duration in minutes (optional, defaults to 15)'
+  );
+});
 
 // Create poll command handler
 bot.command('createpoll', async (ctx) => {
@@ -697,9 +778,13 @@ bot.command('createpoll', async (ctx) => {
   // Parse duration (default to 15 minutes if not provided or invalid)
   const durationMinutes = input.length > 3 ? parseInt(input[3]) || 15 : 15;
 
+  if (optionsInput.length < 2) {
+    return ctx.reply('❌ Please provide at least 2 options for the poll.');
+  }
+
   try {
     const poll_result = await createPoll(ctx, question, optionsInput, durationMinutes);
-    
+
     // Create inline keyboard buttons for voting
     const keyboard = {
       inline_keyboard: optionsInput.map((option, index) => ([{
@@ -708,19 +793,17 @@ bot.command('createpoll', async (ctx) => {
       }]))
     };
 
-    // Get poll results to format the message
     const pollResults = await getPollResults(poll_result.id);
-    
     await ctx.reply(
       formatPollResults(pollResults),
       {
         parse_mode: 'HTML',
-        reply_markup: keyboard,
+        reply_markup: keyboard
       }
     );
   } catch (error) {
     console.error('Error creating poll:', error);
-    await ctx.reply(`❌ Error creating poll`);
+    await ctx.reply(`❌ Error creating poll: ${(error as any).message}`);
   }
 });
 
@@ -762,101 +845,28 @@ bot.command('help', async (ctx) => {
   }
 });
 
-// Command to list active polls
+// Add a command to view active polls
 bot.command('polls', async (ctx) => {
   try {
-    const db = getDb();
     const chatId = ctx.chat.id.toString();
+    const activePolls = await getActivePollsForChat(chatId);
     
-    db.all(
-      `SELECT 
-        id,
-        question,
-        datetime(end_time) as end_time
-      FROM polls 
-      WHERE channel_id = ? AND is_active = 1 AND datetime('now') < datetime(end_time)
-      ORDER BY end_time ASC`,
-      [chatId],
-      async (err, polls: any[]) => {
-        if (err) {
-          console.error('Error fetching polls:', err);
-          return ctx.reply('❌ Error fetching active polls');
-        }
-
-        if (!polls || polls.length === 0) {
-          return ctx.reply('No active polls in this chat.');
-        }
-
-        let message = '📊 <b>Active Polls</b>\n\n';
-        
-        for (const poll of polls) {
-          const endTime = new Date(poll.end_time);
-          const timeLeft = Math.max(0, Math.ceil((endTime.getTime() - Date.now()) / 60000));
-          
-          message += `<b>Poll #${poll.id}</b>: ${poll.question}\n`;
-          message += `⏰ Ends in: ${timeLeft} minutes\n\n`;
-        }
-        
-        message += 'Use /poll [ID] to see details and vote';
-        
-        await ctx.reply(message, { parse_mode: 'HTML' });
-      }
-    );
+    if (activePolls.length === 0) {
+      return ctx.reply('No active polls in this chat.');
+    }
+    
+    let message = '📊 <b>Active Polls</b>\n\n';
+    for (const poll of activePolls) {
+      const endDate = new Date(poll.end_time);
+      message += `ID: ${poll.id}\n`;
+      message += `Question: ${poll.question}\n`;
+      message += `Ends at: ${endDate.toLocaleString()}\n\n`;
+    }
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error) {
-    console.error('Error listing polls:', error);
-    await ctx.reply('❌ Error listing active polls');
-  }
-});
-
-// Command to view a specific poll
-bot.command('poll', async (ctx) => {
-  const args = ctx.message.text.split(' ').slice(1);
-  const pollId = parseInt(args[0]);
-  
-  if (!pollId || isNaN(pollId)) {
-    return ctx.reply(
-      '❌ Please provide a valid poll ID:\n' +
-      '/poll [ID]'
-    );
-  }
-  
-  try {
-    // Get poll options to build keyboard
-    const db = getDb();
-    db.all(
-      `SELECT id, option_text 
-       FROM poll_options 
-       WHERE poll_id = ? 
-       ORDER BY id ASC`,
-      [pollId],
-      async (err, options: any) => {
-        if (err || !options || options.length === 0) {
-          return ctx.reply('❌ Poll not found');
-        }
-        
-        // Create keyboard
-        const keyboard = {
-          inline_keyboard: options.map((option: any, index: any) => ([{
-            text: option.option_text,
-            callback_data: `vote:${pollId}:${index}`
-          }]))
-        };
-        
-        // Get poll results
-        const pollResults = await getPollResults(pollId);
-        
-        await ctx.reply(
-          formatPollResults(pollResults),
-          {
-            parse_mode: 'HTML', 
-            reply_markup: keyboard,
-          }
-        );
-      }
-    );
-  } catch (error) {
-    console.error('Error fetching poll:', error);
-    await ctx.reply(`❌ Error fetching poll`);
+    console.error('Error fetching active polls:', error);
+    await ctx.reply('An error occurred while fetching active polls.');
   }
 });
 
@@ -869,60 +879,53 @@ bot.on('callback_query', async (ctx) => {
   const userId = ctx.callbackQuery.from.id;
   
   try {
-    const voteResult = await handleVote(ctx, parseInt(pollId), parseInt(optionIndex));
-    
-    if (voteResult.success) {
-      // Get updated poll results
-      const pollResults = await getPollResults(parseInt(pollId));
-      
-      // Get poll options to recreate keyboard
-      const db = getDb();
-      const options = await new Promise<any[]>((resolve, reject) => {
-        db.all(
-          `SELECT option_text 
-           FROM poll_options 
-           WHERE poll_id = ? 
-           ORDER BY id ASC`,
-          [pollId],
-          (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          }
-        );
-      });
-      
-      // Recreate keyboard
-      const keyboard = {
-        inline_keyboard: options.map((option, index) => ([{
-          text: option.option_text,
-          callback_data: `vote:${pollId}:${index}`
-        }]))
-      };
-      
-      // Update message with new results
-      await ctx.editMessageText(
-        formatPollResults(pollResults),
-        {
-          parse_mode: 'HTML',
-          reply_markup: keyboard,
-        }
-      );
-      
-      // Show transaction link in the answer
-      if (voteResult.tx_hash) {
-        await ctx.answerCbQuery(
-          `Your vote has been recorded! View transaction: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}`,
-          { show_alert: true }
-        );
-      } else {
-        await ctx.answerCbQuery('Your vote has been recorded!');
-      }
-    } else {
-      await ctx.answerCbQuery(voteResult.message);
+    // Check if poll is active
+    const isActive = await isPollActive(Number(pollId));
+    if (!isActive) {
+      return ctx.answerCbQuery('This poll has expired or is no longer active.');
     }
+    
+    // Handle the vote
+    const voteResult = await handleVote(ctx, Number(pollId), Number(optionIndex));
+    
+    if (!voteResult.success) {
+      return ctx.answerCbQuery(voteResult.message);
+    }
+
+    // Get updated poll results
+    const pollResults = await getPollResults(Number(pollId));
+    
+    // Get all poll options for the keyboard
+    const pollOptions = pollResults.options.map(opt => opt.option_text);
+    
+    // Create updated inline keyboard
+    const keyboard = {
+      inline_keyboard: pollOptions.map((option, index) => ([{
+        text: option,
+        callback_data: `vote:${pollId}:${index}`
+      }]))
+    };
+
+    // Update the message with new results
+    await ctx.editMessageText(
+      formatPollResults(pollResults),
+      {
+        parse_mode: 'HTML',
+        reply_markup: keyboard
+      }
+    );
+
+    // Build message with transaction hash
+    let message = voteResult.message;
+    if (voteResult.tx_hash) {
+      message += `\nView transaction: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}`;
+    }
+    
+    await ctx.answerCbQuery(message);
+    
   } catch (error) {
     console.error('Error handling vote:', error);
-    await ctx.answerCbQuery('Error recording your vote');
+    await ctx.answerCbQuery('An error occurred while processing your vote.');
   }
 });
 
@@ -945,5 +948,23 @@ bot.catch((err, ctx) => {
   console.error('Bot error:', err);
   ctx.reply('An error occurred, please try again.');
 });
+
+// Add a function to clean up expired polls (can be run periodically with a cron job)
+export async function cleanupExpiredPolls(): Promise<number> {
+  const db = getDb();
+  
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE polls 
+      SET is_active = 0 
+      WHERE is_active = 1 
+      AND datetime('now') > datetime(end_time)`,
+      function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      }
+    );
+  });
+}
 
 export { bot, startTimestamp };
