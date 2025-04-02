@@ -2,6 +2,11 @@ import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { config } from './config';
 import { data as infoCommand } from './commands/info';
 import { data as helpCommand } from './commands/help';
+import { getRing } from './utils';
+import { Curve, CurveName } from '@cypher-laboratory/ring-sig-utils';
+import { createHash } from 'crypto';
+import { vote } from 'sc-wrapper';
+import { initializeDatabase } from './database';
 
 const commands = [
   new SlashCommandBuilder()

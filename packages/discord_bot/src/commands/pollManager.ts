@@ -9,6 +9,9 @@ import {
 import { getDb } from '../database';
 import { STARKNET_LOGO_URL } from '../constants';
 import { checkPollRateLimit, checkVoteRateLimit, getRemainingLimits } from '../rateLimiter';
+import { createPoll, vote } from 'sc-wrapper';
+import { getRing, getUserPrivateKey } from '../utils';
+import { Curve, CurveName, Point } from '@cypher-laboratory/ring-sig-utils';
 
 export const createPollCommand = async (interaction: CommandInteraction) => {
   try {
@@ -48,6 +51,10 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
 
     // Create poll in database
     try {
+      // create th poll on starknet
+      const poll_creation_result = await createPoll(question, duration, optionsArray);
+
+      console.log('poll_creation_result on starknet: ', poll_creation_result);
       const result = await new Promise<number>((resolve, reject) => {
         db.serialize(() => {
           db.run('BEGIN TRANSACTION');
@@ -142,7 +149,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     } catch (error) {
       console.error('Database error:', error);
       await interaction.editReply({
-        content: 'An error occurred while creating the poll in the database.',
+        content: 'An error occurred while creating the poll in the Blockchain.',
       });
       return;
     }
@@ -357,6 +364,25 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     // }
 
     if (action === 'vote') {
+      // ensure user didn't vote already
+      const userVoted = await new Promise((resolve, reject) => {
+        db.get(
+          'SELECT * FROM votes WHERE poll_id = ? AND user_id = ?',
+          [pollId, interaction.user.id],
+          (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          }
+        );
+      });
+      if (userVoted) {
+        await interaction.reply({
+          content: 'You already voted for this poll.',
+          ephemeral: true
+        });
+        return;
+      };
+
       // Rate limit check
       const canVote = await checkVoteRateLimit(interaction.user.id);
       if (!canVote) {
@@ -390,6 +416,19 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       if (!option) {
         await interaction.reply({
           content: 'Invalid option selected.',
+          ephemeral: true
+        });
+        return;
+      }
+
+      // save on Starknet
+      const signerPriv = getUserPrivateKey(interaction);
+      const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
+      const vote_result = vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
+      console.log('vote_result on starknet: ', vote_result);
+      if (!vote_result) {
+        await interaction.reply({
+          content: 'Failed to vote on Starknet.',
           ephemeral: true
         });
         return;
@@ -438,7 +477,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
 
         // Then fetch the message
         const message = await channel.messages.fetch(interaction.message.id);
-        
+
         // Update the message
         await message.edit({
           embeds: [updatedEmbed],

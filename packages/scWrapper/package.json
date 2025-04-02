@@ -1,7 +1,8 @@
 {
-  "name": "scWrapper",
+  "name": "sc-wrapper",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.8.2"
@@ -10,5 +11,8 @@
     "@cypher-laboratory/alicesring-sag-starknet": "^0.2.1",
     "@cypher-laboratory/ring-sig-utils": "^0.0.1",
     "starknet": "^6.24.1"
+  },
+  "scripts": {
+    "build": "rimraf ./dist && mkdir -p ./dist && tsc"
   }
 }
