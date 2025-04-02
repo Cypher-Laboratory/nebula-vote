@@ -1,6 +1,5 @@
 import { Telegraf, Context } from 'telegraf';
 import { message } from 'telegraf/filters';
-import { Message } from 'telegraf/typings/core/types/typegram';
 import { getDb } from './database';
 import { config, POWERED_BY_STARKNET } from './config';
 import { getRing, getUserPrivateKey } from './utils';
@@ -692,7 +691,11 @@ bot.on('callback_query', async (ctx) => {
           }
         } else {
           // Vote failed
-          await ctx.reply('❌ Failed to record your vote: ' + voteResult.message);
+          await ctx.telegram.sendMessage(
+            userId, // The ID of the user who voted
+            `❌ Failed to record your vote`,
+            { parse_mode: 'HTML' }
+          );
 
           // Reset the UI
           const resetKeyboard = {
@@ -715,7 +718,11 @@ bot.on('callback_query', async (ctx) => {
         console.error('Background vote processing error:', error);
 
         // Notify user of error
-        await ctx.reply('❌ An error occurred while processing your vote. Please try again.');
+        await ctx.telegram.sendMessage(
+          userId, // The ID of the user who voted
+          `❌ An error occurred while processing your vote. Please try again.`,
+          { parse_mode: 'HTML' }
+        );
 
         // Reset the UI
         const resetKeyboard = {
@@ -764,7 +771,15 @@ bot.on(message('text'), async (ctx) => {
 // Error handler
 bot.catch((err, ctx) => {
   console.error('Bot error:', err);
-  ctx.reply('An error occurred, please try again.');
+  if (ctx.from?.id) {
+    (async () => {
+      await ctx.telegram.sendMessage(
+        ctx.from!.id,
+        'An error occurred, please try again.',
+        { parse_mode: 'HTML' }
+      );
+    })();
+  }
 });
 
 // Add a function to clean up expired polls (can be run periodically with a cron job)
