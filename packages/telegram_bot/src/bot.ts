@@ -385,7 +385,7 @@ async function createPoll(
           creator_id,
           question,
           end_time,
-          is_active,
+          is_active
         ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1)`,
         [
           ctx.chat?.id.toString(),
@@ -426,7 +426,7 @@ async function createPoll(
                   question,
                   datetime(end_time) as end_time,
                   datetime(created_at) as created_at,
-                  is_active,
+                  is_active
                 FROM polls WHERE id = ?`,
                 [pollId],
                 (err, poll) => {
@@ -580,7 +580,7 @@ async function getPollResults(pollId: number): Promise<PollResults> {
         `SELECT 
           question,
           datetime(end_time) as end_time,
-          is_active,
+          is_active
         FROM polls 
         WHERE id = ?`,
         [pollId],
