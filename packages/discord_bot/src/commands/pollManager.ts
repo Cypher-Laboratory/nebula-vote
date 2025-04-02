@@ -49,14 +49,14 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     const db = getDb();
     let pollId: number;
 
-    let pollUrl = 'https://starkscan.co/';
+    let pollUrl = 'https://sepolia.starkscan.co/';
 
     // Create poll in database
     try {
       // create th poll on starknet
       const poll_creation_result = await createPoll(question, duration, optionsArray);
 
-      pollUrl = `https://starkscan.co/tx/${poll_creation_result}`;
+      pollUrl = `https://sepolia.starkscan.co/tx/${poll_creation_result}`;
 
       console.log('poll_creation_result on starknet: ', poll_creation_result);
       const result = await new Promise<number>((resolve, reject) => {
@@ -471,7 +471,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         Number(pollId),
         timeLeft,
         interaction.user.id,
-        `https://starkscan.co/tx/${vote_result.transaction_hash}`,
+        `https://sepolia.starkscan.co/tx/${vote_result.transaction_hash}`,
       );
 
       try {
