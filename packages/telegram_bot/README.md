@@ -223,10 +223,25 @@ The bot's architecture consists of:
 
 ## 📊 Database Schema
 
-The bot uses SQLite with three main tables:
-- **Polls**: Stores poll metadata, questions, and timing information
-- **Poll Options**: Stores the available options for each poll
-- **Votes**: Records anonymous votes while preventing double-voting
+The bot uses SQLite with four main tables:
+
+1. **Polls**: 
+   - Stores poll metadata, questions, and timing information
+   - Includes `tx_hash` field to track blockchain transactions
+
+2. **Poll Options**: 
+   - Stores the available options for each poll
+   - References the poll ID
+
+3. **Votes**: 
+   - Records anonymous votes while preventing double-voting
+   - Includes `tx_hash` field for blockchain verification
+
+4. **User Public Keys**:
+   - Stores user public keys for ring signature creation
+   - Enables anonymous but verifiable voting
+
+This structure allows for complete privacy while maintaining vote integrity and on-chain verification.
 
 ## 👥 Support & Community
 

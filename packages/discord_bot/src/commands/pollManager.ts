@@ -49,14 +49,14 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     const db = getDb();
     let pollId: number;
 
-    let pollUrl = 'https://sepolia.starkscan.co/';
+    let pollUrl = `https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/`;
 
     // Create poll in database
     try {
       // create th poll on starknet
       const poll_creation_result = await createPoll(question, duration, optionsArray);
 
-      pollUrl = `https://sepolia.starkscan.co/tx/${poll_creation_result}`;
+      pollUrl = `https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/tx/${poll_creation_result}`;
 
       console.log('poll_creation_result on starknet: ', poll_creation_result);
       const result = await new Promise<number>((resolve, reject) => {
@@ -472,7 +472,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           Number(pollId),
           timeLeft,
           interaction.user.id,
-          `https://sepolia.starkscan.co/tx/${vote_result.transaction_hash}`
+          `https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/tx/${vote_result.transaction_hash}`
         );
 
         try {
@@ -492,12 +492,12 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           });
 
           await interaction.editReply({
-            content: `🗳️ Your vote has been recorded! [View on StarkScan](https://sepolia.starkscan.co/tx/${vote_result.transaction_hash})`
+            content: `🗳️ Your vote has been recorded! [View on StarkScan](https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/tx/${vote_result.transaction_hash})`
           });
         } catch (error) {
           console.error('Error updating message:', error);
           await interaction.editReply({
-            content: `🗳️ Your vote has been recorded, but the display couldn't be updated. The results are still accurate! [View on StarkScan](https://sepolia.starkscan.co/tx/${vote_result.transaction_hash})`
+            content: `🗳️ Your vote has been recorded, but the display couldn't be updated. The results are still accurate! [View on StarkScan](https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/tx/${vote_result.transaction_hash})`
           });
         }
       } catch (error) {

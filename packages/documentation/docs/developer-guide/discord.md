@@ -298,4 +298,4 @@ For questions, support, or to contribute to the development of Nebula Vote, plea
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/Cypher-Laboratory/nebula-vote/blob/main/LICENSE) file for details.
