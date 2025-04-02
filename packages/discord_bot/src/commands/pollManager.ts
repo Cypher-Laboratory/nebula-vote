@@ -56,7 +56,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
       // create th poll on starknet
       const poll_creation_result = await createPoll(question, duration, optionsArray);
 
-      pollUrl = `https://starkscan.co/contract/${poll_creation_result}`;
+      pollUrl = `https://starkscan.co/tx/${poll_creation_result}`;
 
       console.log('poll_creation_result on starknet: ', poll_creation_result);
       const result = await new Promise<number>((resolve, reject) => {
@@ -303,9 +303,9 @@ async function createPollEmbed(
   const embed = new EmbedBuilder()
     .setTitle(question)
     .setDescription(
-      userVote
+      (userVote
         ? `Click a button below to vote!\n\n👉 Your current vote: **${userVote}**`
-        : 'Click a button below to vote!'
+        : 'Click a button below to vote!') + `\n[View on StarkScan](${pollUrl})`
     )
     .setColor(isActive ? '#E175B1' : '#EC796B');
 
@@ -320,8 +320,6 @@ async function createPollEmbed(
       iconURL: STARKNET_LOGO_URL
     });
   }
-
-  embed.addFields({ name: 'View on Starknet', value: `[View on StarkScan](${pollUrl})`, inline: false });
 
   return embed;
 }
