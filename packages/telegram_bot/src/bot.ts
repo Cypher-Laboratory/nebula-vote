@@ -379,7 +379,6 @@ async function createPoll(
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
 
-      // Insert the poll with tx_hash
       db.run(
         `INSERT INTO polls (
           channel_id,
@@ -387,14 +386,12 @@ async function createPoll(
           question,
           end_time,
           is_active,
-          tx_hash
-        ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1, ?)`,
+        ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1)`,
         [
           ctx.chat?.id.toString(),
           ctx.from?.id.toString(),
           question,
           duration.toString(),
-          tx_hash // Store the transaction hash
         ],
         function (err) {
           if (err) {
@@ -430,7 +427,6 @@ async function createPoll(
                   datetime(end_time) as end_time,
                   datetime(created_at) as created_at,
                   is_active,
-                  tx_hash
                 FROM polls WHERE id = ?`,
                 [pollId],
                 (err, poll) => {
@@ -555,9 +551,9 @@ async function handleVote(
   // Record the vote
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT INTO votes (poll_id, option_id, user_id, tx_hash)
-       VALUES (?, ?, ?, ?)`,
-      [pollId, (option as any).id, ctx.from?.id, tx_hash],
+      `INSERT INTO votes (poll_id, option_id, user_id)
+       VALUES (?, ?, ?)`,
+      [pollId, (option as any).id, ctx.from?.id],
       (err) => {
         if (err) {
           reject(err);
@@ -585,7 +581,6 @@ async function getPollResults(pollId: number): Promise<PollResults> {
           question,
           datetime(end_time) as end_time,
           is_active,
-          tx_hash
         FROM polls 
         WHERE id = ?`,
         [pollId],
