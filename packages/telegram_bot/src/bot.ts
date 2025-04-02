@@ -358,7 +358,6 @@ async function createPoll(
           ctx.from?.id.toString(),
           question,
           duration.toString(),
-          tx_hash // Store the transaction hash
         ],
         function (err) {
           if (err) {
@@ -774,7 +773,7 @@ bot.command('createpoll', async (ctx) => {
     );
   } catch (error) {
     console.error('Error creating poll:', error);
-    await ctx.reply(`❌ Error creating poll: ${(error as any).message}`);
+    await ctx.reply(`❌ Error creating poll`);
   }
 });
 
