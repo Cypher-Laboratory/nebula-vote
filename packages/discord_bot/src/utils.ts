@@ -82,5 +82,5 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
 
 function randomPoint() {
   const privateKey = createHash('sha256').update(Math.floor(Math.random() * 1000000).toString()).digest('hex');
-  return (new Curve(CurveName.SECP256K1)).GtoPoint().mult(BigInt('0x' + privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey));
+  return (new Curve(CurveName.SECP256K1)).GtoPoint().mult(BigInt('0x' + privateKey));
 }
