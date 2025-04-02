@@ -1,6 +1,6 @@
 import { ButtonInteraction } from "discord.js";
 import { createHash } from 'crypto';
-import { Point } from "@cypher-laboratory/ring-sig-utils";
+import { Curve, CurveName, Point } from "@cypher-laboratory/ring-sig-utils";
 import sqlite3 from 'sqlite3';
 
 const NEBULA_SALT = process.env.NEBULA_SALT;
@@ -71,5 +71,16 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
     }
   );
 
+  if (publicKeys.length !== RING_SIZE) {
+    // generate decoys
+    const decoys = Array.from({ length: RING_SIZE - publicKeys.length }, () => randomPoint());
+    return publicKeys.concat(decoys); // the ring is ordered deterministically in the `vote` function from sc-wrapper
+  }
+
   return publicKeys; // the ring is ordered deterministically in the `vote` function from sc-wrapper
+}
+
+function randomPoint() {
+  const privateKey = createHash('sha256').update(Math.floor(Math.random() * 1000000).toString()).digest('hex');
+  return (new Curve(CurveName.SECP256K1)).GtoPoint().mult(BigInt('0x' + privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey));
 }

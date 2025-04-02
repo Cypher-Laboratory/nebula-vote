@@ -342,16 +342,20 @@ const formatDurationLeft = (duration: number): string => {
 
   return `${duration}s`;
 };
-
 export const handlePollButton = async (interaction: ButtonInteraction) => {
   try {
     const [action, pollId, optionIndex] = interaction.customId.split('_');
+
+    // Acknowledge the interaction immediately to prevent timeout
+    // This gives you up to 15 minutes to process and edit the response
+    await interaction.deferReply({ ephemeral: true });
+
     const db = getDb();
 
     // Check if poll is still active
     const poll = await new Promise((resolve, reject) => {
       db.get(
-        'SELECT * FROM polls WHERE id = ? ', // AND is_active = 1 AND datetime("now") < end_time',
+        'SELECT * FROM polls WHERE id = ?',
         [pollId],
         (err, result) => {
           if (err) reject(err);
@@ -359,14 +363,6 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         }
       );
     });
-
-    // if (!poll) {
-    //   await interaction.reply({
-    //     content: 'This poll has ended.',
-    //     ephemeral: true
-    //   });
-    //   return;
-    // }
 
     if (action === 'vote') {
       // ensure user didn't vote already
@@ -380,10 +376,10 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           }
         );
       });
+
       if (userVoted) {
-        await interaction.reply({
-          content: 'You already voted for this poll.',
-          ephemeral: true
+        await interaction.editReply({
+          content: 'You already voted for this poll.'
         });
         return;
       };
@@ -395,9 +391,8 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         const errorMessage = userVotes === 0
           ? `⚠️ You exceeded your rate limit, please wait a few minutes`
           : `⚠️ Bot is under heavy load. Please try again in a few minutes.`;
-        await interaction.reply({
-          content: errorMessage,
-          ephemeral: true
+        await interaction.editReply({
+          content: errorMessage
         });
         return;
       }
@@ -419,89 +414,98 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       });
 
       if (!option) {
-        await interaction.reply({
-          content: 'Invalid option selected.',
-          ephemeral: true
+        await interaction.editReply({
+          content: 'Invalid option selected.'
         });
         return;
       }
 
-      // save on Starknet
-      const signerPriv = getUserPrivateKey(interaction);
-      const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
-      const vote_result = await vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
-      console.log('vote_result on starknet: ', vote_result);
-      if (!vote_result) {
-        await interaction.reply({
-          content: 'Failed to vote on Starknet.',
-          ephemeral: true
-        });
-        return;
-      }
-
-      // Record vote
-      await new Promise<void>((resolve, reject) => {
-        db.run(
-          'INSERT OR REPLACE INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
-          [pollId, (option as any).id, interaction.user.id],
-          (err) => {
-            if (err) reject(err);
-            else resolve();
-          }
-        );
+      // Let the user know we're processing their vote
+      await interaction.editReply({
+        content: '⏳ Processing your vote on Starknet (this may take a few moments)...'
       });
 
-      // Get time left for the poll
-      const timeLeft = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT strftime('%s', end_time) - strftime('%s', 'now') as time_left
-           FROM polls
-           WHERE id = ?`,
-          [pollId],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result ? (result as any).time_left : 0);
-          }
-        );
-      }) as number;
-
-      // Update the poll embed with the new vote
-      const updatedEmbed = await createPollEmbed(
-        (poll as any).question,
-        Number(pollId),
-        timeLeft,
-        interaction.user.id,
-        `https://sepolia.starkscan.co/tx/${vote_result.transaction_hash}`,
-      );
-
+      // Save on Starknet
       try {
-        // First, fetch the channel if needed
-        const channel = await interaction.client.channels.fetch(interaction.channelId);
-        if (!channel?.isTextBased()) {
-          throw new Error('Channel is not text-based');
+        const signerPriv = getUserPrivateKey(interaction);
+        const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
+        const vote_result = await vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
+        console.log('vote_result on starknet: ', vote_result);
+
+        if (!vote_result) {
+          await interaction.editReply({
+            content: 'Failed to vote on Starknet.'
+          });
+          return;
         }
 
-        // Then fetch the message
-        const message = await channel.messages.fetch(interaction.message.id);
-
-        // Update the message
-        await message.edit({
-          embeds: [updatedEmbed],
-          components: message.components
+        // Record vote in local database
+        await new Promise<void>((resolve, reject) => {
+          db.run(
+            'INSERT OR REPLACE INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
+            [pollId, (option as any).id, interaction.user.id],
+            (err) => {
+              if (err) reject(err);
+              else resolve();
+            }
+          );
         });
+        console.log('Vote recorded locally for user:', interaction.user.id);
 
-        await interaction.reply({
-          content: `🗳️ Your vote has been recorded!`,
-          ephemeral: true
-        });
+        // Get time left for the poll
+        const timeLeft = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT strftime('%s', end_time) - strftime('%s', 'now') as time_left
+             FROM polls
+             WHERE id = ?`,
+            [pollId],
+            (err, result) => {
+              if (err) reject(err);
+              else resolve(result ? (result as any).time_left : 0);
+            }
+          );
+        }) as number;
+
+        // Update the poll embed with the new vote
+        const updatedEmbed = await createPollEmbed(
+          (poll as any).question,
+          Number(pollId),
+          timeLeft,
+          interaction.user.id,
+          `https://sepolia.starkscan.co/tx/${vote_result.transaction_hash}`
+        );
+
+        try {
+          // First, fetch the channel if needed
+          const channel = await interaction.client.channels.fetch(interaction.channelId);
+          if (!channel?.isTextBased()) {
+            throw new Error('Channel is not text-based');
+          }
+
+          // Then fetch the message
+          const message = await channel.messages.fetch(interaction.message.id);
+
+          // Update the message
+          await message.edit({
+            embeds: [updatedEmbed],
+            components: message.components
+          });
+
+          await interaction.editReply({
+            content: `🗳️ Your vote has been recorded! [View on StarkScan](https://sepolia.starkscan.co/tx/${vote_result.transaction_hash})`
+          });
+        } catch (error) {
+          console.error('Error updating message:', error);
+          await interaction.editReply({
+            content: `🗳️ Your vote has been recorded, but the display couldn't be updated. The results are still accurate! [View on StarkScan](https://sepolia.starkscan.co/tx/${vote_result.transaction_hash})`
+          });
+        }
       } catch (error) {
-        console.error('Error updating message:', error);
-        await interaction.reply({
-          content: '🗳️ Your vote has been recorded, but the display couldn\'t be updated. The results are still accurate!',
-          ephemeral: true
+        console.error('Error processing vote on Starknet:', error);
+        await interaction.editReply({
+          content: 'An error occurred while processing your vote on Starknet. Please try again.'
         });
       }
-
     } else if (action === 'results') {
       const results = await getPollResults(Number(pollId));
       const userVote = await getUserVote(Number(pollId), interaction.user.id);
@@ -519,16 +523,27 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           iconURL: STARKNET_LOGO_URL
         });
 
-      await interaction.reply({
-        embeds: [resultsEmbed],
-        ephemeral: true
+      await interaction.editReply({
+        embeds: [resultsEmbed]
       });
     }
   } catch (error) {
     console.error('Error handling poll interaction:', error);
-    await interaction.reply({
-      content: 'An error occurred while processing your request. Your vote may still have been recorded.',
-      ephemeral: true
-    });
+
+    // Try to respond if we haven't already
+    try {
+      if (interaction.deferred) {
+        await interaction.editReply({
+          content: 'An error occurred while processing your request. Your vote may still have been recorded.'
+        });
+      } else {
+        await interaction.reply({
+          content: 'An error occurred while processing your request. Your vote may still have been recorded.',
+          ephemeral: true
+        });
+      }
+    } catch (replyError) {
+      console.error('Error sending error response:', replyError);
+    }
   }
 };
