@@ -501,7 +501,7 @@ async function handleVote(
       Number(ctx.from?.id || 0),
       signerPubKey)
   );
-  console.log('vote_result on starknet: ', vote_result);
+  console.log('vote_result on starknet: ', vote_result.transaction_hash);
 
   if (!vote_result) {
     return { success: false, message: 'Failed to record vote on Starknet' };
