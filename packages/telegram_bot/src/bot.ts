@@ -337,6 +337,8 @@ async function createPoll(
   // create the poll on starknet
   const tx_hash: string = await createStarknetPoll(question, Date.now() + 1000 * 60 * duration, options);
 
+  console.log('new poll deployed on starknet with tx_hash: ', tx_hash);
+
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
@@ -870,6 +872,7 @@ bot.command('polls', async (ctx) => {
 });
 
 // Handle vote callbacks
+// Handle vote callbacks
 bot.on('callback_query', async (ctx) => {
   const callbackData = (ctx.callbackQuery as any).data;
   if (!callbackData?.startsWith('vote:')) return;
@@ -878,53 +881,125 @@ bot.on('callback_query', async (ctx) => {
   const userId = ctx.callbackQuery.from.id;
 
   try {
-    // Check if poll is active
+    // Check if poll is active immediately
     const isActive = await isPollActive(Number(pollId));
     if (!isActive) {
       return ctx.answerCbQuery('This poll has expired or is no longer active.');
     }
 
-    // Handle the vote
-    const voteResult = await handleVote(ctx, Number(pollId), Number(optionIndex));
-
-    if (!voteResult.success) {
-      return ctx.answerCbQuery(voteResult.message);
+    // Check if user has already voted
+    const existingVote = await getUserVote(Number(pollId), userId.toString());
+    if (existingVote) {
+      return ctx.answerCbQuery('You have already voted in this poll!');
     }
 
-    // Get updated poll results
+    // Immediately answer callback query to prevent timeout
+    await ctx.answerCbQuery('Your vote is being processed...');
+
+    // Show a temporary "processing" state in the UI
     const pollResults = await getPollResults(Number(pollId));
-
-    // Get all poll options for the keyboard
     const pollOptions = pollResults.options.map(opt => opt.option_text);
-
-    // Create updated inline keyboard
     const keyboard = {
       inline_keyboard: pollOptions.map((option, index) => ([{
-        text: option,
+        text: option + (index === Number(optionIndex) ? ' (Processing...)' : ''),
         callback_data: `vote:${pollId}:${index}`
       }]))
     };
 
-    // Update the message with new results
+    // Update message to show processing state
     await ctx.editMessageText(
-      formatPollResults(pollResults),
+      formatPollResults(pollResults) + '\n\n⏳ Processing vote...',
       {
         parse_mode: 'HTML',
         reply_markup: keyboard
       }
     );
 
-    // Build message with transaction hash
-    let message = voteResult.message;
-    if (voteResult.tx_hash) {
-      message += `\nView transaction: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}`;
-    }
-
-    await ctx.answerCbQuery(message);
+    // Process the blockchain transaction in the background
+    // Without awaiting it here, so we don't block the response
+    handleVote(ctx, Number(pollId), Number(optionIndex))
+      .then(async (voteResult) => {
+        if (voteResult.success) {
+          // Get updated poll results after successful vote
+          const updatedResults = await getPollResults(Number(pollId));
+          
+          // Update UI with new results
+          const updatedKeyboard = {
+            inline_keyboard: pollOptions.map((option, index) => ([{
+              text: option,
+              callback_data: `vote:${pollId}:${index}`
+            }]))
+          };
+          
+          await ctx.editMessageText(
+            formatPollResults(updatedResults),
+            {
+              parse_mode: 'HTML',
+              reply_markup: updatedKeyboard
+            }
+          );
+          
+          // Send a confirmation message with transaction details
+          if (voteResult.tx_hash) {
+            await ctx.reply(
+              `✅ Your vote has been recorded!\n\n<a href="https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}">🔍 View on StarkScan</a>`,
+              { parse_mode: 'HTML' }
+            );
+          }
+        } else {
+          // Vote failed
+          await ctx.reply('❌ Failed to record your vote: ' + voteResult.message);
+          
+          // Reset the UI
+          const resetKeyboard = {
+            inline_keyboard: pollOptions.map((option, index) => ([{
+              text: option,
+              callback_data: `vote:${pollId}:${index}`
+            }]))
+          };
+          
+          await ctx.editMessageText(
+            formatPollResults(pollResults),
+            {
+              parse_mode: 'HTML',
+              reply_markup: resetKeyboard
+            }
+          );
+        }
+      })
+      .catch(async (error) => {
+        console.error('Background vote processing error:', error);
+        
+        // Notify user of error
+        await ctx.reply('❌ An error occurred while processing your vote. Please try again.');
+        
+        // Reset the UI
+        const resetKeyboard = {
+          inline_keyboard: pollOptions.map((option, index) => ([{
+            text: option,
+            callback_data: `vote:${pollId}:${index}`
+          }]))
+        };
+        
+        await ctx.editMessageText(
+          formatPollResults(pollResults),
+          {
+            parse_mode: 'HTML',
+            reply_markup: resetKeyboard
+          }
+        );
+      });
 
   } catch (error) {
-    console.error('Error handling vote:', error);
-    await ctx.answerCbQuery('An error occurred while processing your vote.');
+    console.error('Initial vote handling error:', error);
+    
+    // Try to answer the callback query if it hasn't been answered yet
+    try {
+      await ctx.answerCbQuery('An error occurred. Please try again.');
+    } catch (e) {
+      // Ignore if we can't answer the callback query
+      console.log('Could not answer callback query:', (e as any).message);
+    }
   }
 });
 
