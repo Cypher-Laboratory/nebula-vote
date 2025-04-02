@@ -24,6 +24,7 @@ export function getUserPrivateKey(interaction: ButtonInteraction): bigint {
 
   return privateKey;
 }
+
 export async function getRing(userId: number, signerPub: Point): Promise<Point[]> {
   const db = new sqlite3.Database('polls.db');
 
@@ -36,9 +37,6 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
       LIMIT ?;`,
       [signerPub.serialize(), RING_SIZE - 1], // Exclude the signer's public key
       (err, rows: any) => {
-        // Close the database connection when done
-        db.close();
-
         if (err) {
           reject(err);
           return;
@@ -61,7 +59,7 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
   publicKeys.push(signerPub);
 
   // add the signer public key to the table (ignoring errors)
-  db.run(
+  await db.run(
     `INSERT OR IGNORE INTO user_pub_keys (user_id, public_key) VALUES (?, ?);`,
     [userId, signerPub.serialize()],
     (err) => {
@@ -71,6 +69,8 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
     }
   );
 
+  db.close();
+
   if (publicKeys.length !== RING_SIZE) {
     // generate decoys
     const decoys = Array.from({ length: RING_SIZE - publicKeys.length }, () => randomPoint());
@@ -79,6 +79,7 @@ export async function getRing(userId: number, signerPub: Point): Promise<Point[]
 
   return publicKeys; // the ring is ordered deterministically in the `vote` function from sc-wrapper
 }
+
 
 function randomPoint() {
   const privateKey = createHash('sha256').update(Math.floor(Math.random() * 1000000).toString()).digest('hex');
