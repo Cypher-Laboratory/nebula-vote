@@ -429,7 +429,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       try {
         const signerPriv = getUserPrivateKey(interaction);
         const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
-        const vote_result = await vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
+        const vote_result = await vote(Number(pollId) - 1 /* starknet polls id start at 0 and sqlite makes the poll ids start at 1 */, Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
         console.log('vote_result on starknet: ', vote_result);
 
         if (!vote_result) {
