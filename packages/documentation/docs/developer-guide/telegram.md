@@ -152,24 +152,26 @@ The bot's structure is organized around the Telegraf framework:
 
 ### Database Schema
 
-The database consists of three main tables:
+The database consists of four main tables:
 
 **Polls Table**
 ```sql
-CREATE TABLE polls (
+CREATE TABLE IF NOT EXISTS polls (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT NOT NULL,
   channel_id TEXT NOT NULL,
   creator_id TEXT NOT NULL,
   question TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   end_time DATETIME,
-  is_active BOOLEAN DEFAULT 1
+  is_active BOOLEAN DEFAULT 1,
+  tx_hash TEXT
 );
 ```
 
 **Poll Options Table**
 ```sql
-CREATE TABLE poll_options (
+CREATE TABLE IF NOT EXISTS poll_options (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   poll_id INTEGER NOT NULL,
   option_text TEXT NOT NULL,
@@ -179,15 +181,26 @@ CREATE TABLE poll_options (
 
 **Votes Table**
 ```sql
-CREATE TABLE votes (
+CREATE TABLE IF NOT EXISTS votes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   poll_id INTEGER NOT NULL,
   option_id INTEGER NOT NULL,
   user_id TEXT NOT NULL,
   voted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  tx_hash TEXT,
   FOREIGN KEY (poll_id) REFERENCES polls (id),
   FOREIGN KEY (option_id) REFERENCES poll_options (id),
   UNIQUE(poll_id, user_id)
+);
+```
+
+**User Public Keys Table**
+```sql
+CREATE TABLE IF NOT EXISTS user_pub_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  public_key TEXT NOT NULL,
+  UNIQUE(user_id)
 );
 ```
 
@@ -200,11 +213,13 @@ The poll lifecycle is managed by several functions in `pollManager.ts`:
    - Creates database entries
    - Generates inline keyboard for voting
    - Sets up poll expiration
+   - Records blockchain transaction hash
 
 2. **Vote Handling**:
    - Records votes in database
    - Prevents double voting
    - Updates poll message with new results
+   - Stores transaction hash for each vote
 
 3. **Results Display**:
    - Formats results with percentages and visual bars
@@ -331,6 +346,11 @@ When customizing the bot, keep these security best practices in mind:
    - Implement proper error handling for API calls
    - Be aware of Telegram's rate limits
 
+6. **Blockchain Security**:
+   - Verify transaction confirmations
+   - Implement secure key management for blockchain interactions
+   - Keep transaction hashes for audit trails
+
 By following these guidelines, you can customize the Nebula Vote Telegram bot while maintaining its security, privacy, and performance characteristics.
 
 ---
@@ -345,4 +365,4 @@ For questions, support, or to contribute to the development of Nebula Vote, plea
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/Cypher-Laboratory/nebula-vote/blob/main/LICENSE) file for details.

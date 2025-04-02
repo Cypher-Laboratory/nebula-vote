@@ -40,8 +40,7 @@ export async function createPoll(
   title: string,
   expirationTime: number,
   choices: string[],
-  abi: any
-) {
+): Promise<string> {
   const contract = new Contract(abi, contractAddress!);
   contract.connect(account);
 

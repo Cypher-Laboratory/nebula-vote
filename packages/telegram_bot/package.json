@@ -18,7 +18,9 @@
     "sqlite3": "^5.1.7",
     "telegraf": "^4.16.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "sc-wrapper": "file:../scWrapper",
+    "@cypher-laboratory/ring-sig-utils": "^0.0.1"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"

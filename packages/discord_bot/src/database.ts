@@ -44,9 +44,22 @@ export function initializeDatabase(): void {
         UNIQUE(poll_id, user_id)
       )
     `);
+
+    // save the user's public keys to create future rings
+    db.run(`
+      CREATE TABLE IF NOT EXISTS user_pub_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        public_key TEXT NOT NULL,
+        UNIQUE(user_id)
+      )
+    `);
   });
+
+  console.log('Database initialized');
 }
 
 export function getDb(): Database {
   return db;
 }
+
