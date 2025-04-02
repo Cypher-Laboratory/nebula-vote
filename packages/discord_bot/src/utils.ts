@@ -4,7 +4,7 @@ import { Curve, CurveName, Point } from "@cypher-laboratory/ring-sig-utils";
 import sqlite3 from 'sqlite3';
 
 const NEBULA_SALT = process.env.NEBULA_SALT;
-const RING_SIZE = Number(process.env.RING_SIZE || "16");
+const RING_SIZE = Number(process.env.RING_SIZE || "5");
 
 if (!NEBULA_SALT) {
   throw new Error("NEBULA_SALT is not defined")
