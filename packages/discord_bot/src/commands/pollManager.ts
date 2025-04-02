@@ -49,10 +49,14 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     const db = getDb();
     let pollId: number;
 
+    let pollUrl = 'https://starkscan.co/';
+
     // Create poll in database
     try {
       // create th poll on starknet
       const poll_creation_result = await createPoll(question, duration, optionsArray);
+
+      pollUrl = `https://starkscan.co/contract/${poll_creation_result}`;
 
       console.log('poll_creation_result on starknet: ', poll_creation_result);
       const result = await new Promise<number>((resolve, reject) => {
@@ -155,7 +159,7 @@ export const createPollCommand = async (interaction: CommandInteraction) => {
     }
 
     // Create embed for the poll
-    const pollEmbed = await createPollEmbed(question, pollId, duration * 60, interaction.user.id, true);
+    const pollEmbed = await createPollEmbed(question, pollId, duration * 60, interaction.user.id, pollUrl, true);
 
     // Create button rows (max 5 buttons per row)
     const rows: ActionRowBuilder<ButtonBuilder>[] = [];
@@ -291,6 +295,7 @@ async function createPollEmbed(
   pollId: number,
   duration: number, // seconds
   userId: string,
+  pollUrl: string,
   isActive: boolean = true
 ): Promise<EmbedBuilder> {
   const userVote = await getUserVote(pollId, userId);
@@ -315,6 +320,8 @@ async function createPollEmbed(
       iconURL: STARKNET_LOGO_URL
     });
   }
+
+  embed.addFields({ name: 'View on Starknet', value: `[View on StarkScan](${pollUrl})`, inline: false });
 
   return embed;
 }
@@ -424,7 +431,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       // save on Starknet
       const signerPriv = getUserPrivateKey(interaction);
       const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
-      const vote_result = vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
+      const vote_result = await vote(Number(pollId), Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
       console.log('vote_result on starknet: ', vote_result);
       if (!vote_result) {
         await interaction.reply({
@@ -465,7 +472,8 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         (poll as any).question,
         Number(pollId),
         timeLeft,
-        interaction.user.id
+        interaction.user.id,
+        `https://starkscan.co/tx/${vote_result.transaction_hash}`,
       );
 
       try {
