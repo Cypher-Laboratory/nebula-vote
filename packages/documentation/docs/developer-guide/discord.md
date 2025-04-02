@@ -69,6 +69,14 @@ TIME_PERIOD=30
 GLOBAL_POLLS_LIMIT=60
 GLOBAL_VOTES_LIMIT=20000
 USER_VOTES_LIMIT=6
+
+# Starknet params
+NEBULA_SALT=your_nebula_salt_here # must be unique and secret
+RING_SIZE=16 # number of addresses in the ring signature (group of users the voter is hidden in), default is 16
+CONTRACT_ADDRESS=
+ACCOUNT_PRIVATE_KEY=
+ACCOUNT_ADDRESS=
+STARKNET_NODE_URL=
 ```
 
 4. Deploy Discord commands:
