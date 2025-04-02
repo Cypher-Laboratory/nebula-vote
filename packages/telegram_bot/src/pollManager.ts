@@ -3,6 +3,9 @@ import { Context } from 'telegraf';
 import { Message } from 'telegraf/typings/core/types/typegram';
 import { getDb } from './database';
 import { config } from './config';
+import { getRing, getUserPrivateKey } from './utils';
+import { Curve, CurveName } from '@cypher-laboratory/ring-sig-utils';
+import { vote, createPoll as createStarknetPoll } from 'sc-wrapper';
 
 interface PollData {
   id: number;
@@ -11,6 +14,7 @@ interface PollData {
   end_time: string;
   created_at: string;
   is_active: boolean;
+  tx_hash?: string; // Added tx_hash to store the transaction hash
 }
 
 interface PollOption {
@@ -25,6 +29,7 @@ interface PollResults {
   total_votes: number;
   is_active: boolean;
   end_time: string;
+  tx_hash?: string; // Added tx_hash to include in results
 }
 
 // Create a new poll
@@ -57,26 +62,31 @@ export async function createPoll(
     throw new Error(`Maximum duration is ${config.polls.maxDuration} minutes`);
   }
 
+  // create the poll on starknet
+  const tx_hash: string = await createStarknetPoll(question, Date.now() + 1000 * 60 * duration, options);
+
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
 
-      // Insert the poll
+      // Insert the poll with tx_hash
       db.run(
         `INSERT INTO polls (
           channel_id,
           creator_id,
           question,
           end_time,
-          is_active
-        ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1)`,
+          is_active,
+          tx_hash
+        ) VALUES (?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1, ?)`,
         [
           ctx.chat?.id.toString(),
           ctx.from?.id.toString(),
           question,
-          duration.toString()
+          duration.toString(),
+          tx_hash // Store the transaction hash
         ],
-        function(err) {
+        function (err) {
           if (err) {
             db.run('ROLLBACK');
             reject(err);
@@ -109,7 +119,8 @@ export async function createPoll(
                   question,
                   datetime(end_time) as end_time,
                   datetime(created_at) as created_at,
-                  is_active
+                  is_active,
+                  tx_hash
                 FROM polls WHERE id = ?`,
                 [pollId],
                 (err, poll) => {
@@ -149,7 +160,7 @@ export async function handleVote(
   ctx: Context,
   pollId: number,
   optionIndex: number
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; tx_hash?: string }> {
   const db = getDb();
 
   // Check if poll exists and is active
@@ -189,19 +200,37 @@ export async function handleVote(
     return { success: false, message: 'Invalid option selected' };
   }
 
+  // Record the vote on starknet
+  const signerPriv = getUserPrivateKey(ctx);
+  const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
+  const vote_result = await vote(
+    Number(pollId) - 1 /* starknet polls id start at 0 and sqlite makes the poll ids start at 1 */,
+    Number(optionIndex),
+    signerPriv,
+    await getRing(
+      Number(ctx.from?.id || 0),
+      signerPubKey)
+  );
+  console.log('vote_result on starknet: ', vote_result);
+
+  if (!vote_result) {
+    return { success: false, message: 'Failed to record vote on Starknet' };
+  }
+
   // Record or update the vote
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT OR REPLACE INTO votes (poll_id, option_id, user_id)
-       VALUES (?, ?, ?)`,
-      [pollId, (option as any).id, ctx.from?.id],
+      `INSERT OR REPLACE INTO votes (poll_id, option_id, user_id, tx_hash)
+       VALUES (?, ?, ?, ?)`,
+      [pollId, (option as any).id, ctx.from?.id, vote_result],
       (err) => {
         if (err) {
           reject(err);
         } else {
           resolve({
             success: true,
-            message: 'Your vote has been recorded!'
+            message: 'Your vote has been recorded!',
+            tx_hash: vote_result.transaction_hash
           });
         }
       }
@@ -220,7 +249,8 @@ export async function getPollResults(pollId: number): Promise<PollResults> {
         `SELECT 
           question,
           datetime(end_time) as end_time,
-          is_active
+          is_active,
+          tx_hash
         FROM polls 
         WHERE id = ?`,
         [pollId],
@@ -263,7 +293,8 @@ export async function getPollResults(pollId: number): Promise<PollResults> {
                 options: options as PollOption[],
                 total_votes: totalVotes as number,
                 is_active: (poll as any).is_active === 1,
-                end_time: (poll as any).end_time
+                end_time: (poll as any).end_time,
+                tx_hash: (poll as any).tx_hash
               });
             }
           );
@@ -277,19 +308,22 @@ export async function getPollResults(pollId: number): Promise<PollResults> {
 export async function getUserVote(
   pollId: number,
   userId: string
-): Promise<string | null> {
+): Promise<{ option_text: string; tx_hash?: string } | null> {
   const db = getDb();
 
   return new Promise((resolve, reject) => {
     db.get(
-      `SELECT po.option_text
+      `SELECT po.option_text, v.tx_hash
        FROM votes v
        JOIN poll_options po ON v.option_id = po.id
        WHERE v.poll_id = ? AND v.user_id = ?`,
       [pollId, userId],
       (err, result) => {
         if (err) reject(err);
-        else resolve(result ? (result as any).option_text : null);
+        else resolve(result ? { 
+          option_text: (result as any).option_text,
+          tx_hash: (result as any).tx_hash
+        } : null);
       }
     );
   });
@@ -297,24 +331,29 @@ export async function getUserVote(
 
 // Format poll results for display
 export function formatPollResults(results: PollResults): string {
-  const { question, options, total_votes, is_active, end_time } = results;
-  
+  const { question, options, total_votes, is_active, end_time, tx_hash } = results;
+
   let output = `📊 ${question}\n\n`;
-  
+
   options.forEach(opt => {
     const percentage = total_votes ? ((opt.vote_count / total_votes) * 100).toFixed(1) : '0.0';
-    const bar = '█'.repeat(Math.floor(Number(percentage) / 5)) + 
-                '░'.repeat(20 - Math.floor(Number(percentage) / 5));
+    const bar = '█'.repeat(Math.floor(Number(percentage) / 5)) +
+      '░'.repeat(20 - Math.floor(Number(percentage) / 5));
     output += `${opt.option_text}\n${bar} ${percentage}% (${opt.vote_count} votes)\n\n`;
   });
 
   output += `Total votes: ${total_votes}\n`;
-  
+
   if (!is_active) {
     output += '❌ This poll has ended';
   } else {
     const endDate = new Date(end_time);
     output += `⏰ Ends at: ${endDate.toLocaleString()}`;
+  }
+
+  // Add block explorer link if tx_hash is available
+  if (tx_hash) {
+    output += `\n\n🔍 View on StarkScan: https://${process.env.TESTNET == 'true' ? 'sepolia.' : ''}starkscan.co/tx/${tx_hash}`;
   }
 
   return output;
@@ -366,6 +405,7 @@ export async function getActivePollsForChat(chatId: string): Promise<PollData[]>
         p.end_time,
         p.created_at,
         p.is_active,
+        p.tx_hash,
         GROUP_CONCAT(po.option_text) as options
       FROM polls p
       JOIN poll_options po ON p.id = po.poll_id
