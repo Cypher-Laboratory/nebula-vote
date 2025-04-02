@@ -103,6 +103,16 @@ export function initializeDatabase(): void {
       )
     `);
 
+    // save the user's public keys to create future rings
+    db.run(`
+          CREATE TABLE IF NOT EXISTS user_pub_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            public_key TEXT NOT NULL,
+            UNIQUE(user_id)
+          )
+        `);
+
     // Add migration for existing tables if they exist
     // This safely adds tx_hash column to polls table if it doesn't exist
     db.run(`
