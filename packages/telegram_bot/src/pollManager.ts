@@ -1,6 +1,4 @@
-// pollManager.ts
 import { Context } from 'telegraf';
-import { Message } from 'telegraf/typings/core/types/typegram';
 import { getDb } from './database';
 import { config } from './config';
 import { getRing, getUserPrivateKey } from './utils';
@@ -14,7 +12,7 @@ interface PollData {
   end_time: string;
   created_at: string;
   is_active: boolean;
-  tx_hash?: string; // Added tx_hash to store the transaction hash
+  tx_hash: string;
 }
 
 interface PollOption {
@@ -29,7 +27,7 @@ interface PollResults {
   total_votes: number;
   is_active: boolean;
   end_time: string;
-  tx_hash?: string; // Added tx_hash to include in results
+  tx_hash: string;
 }
 
 // Create a new poll
