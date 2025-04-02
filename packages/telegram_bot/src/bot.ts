@@ -350,9 +350,8 @@ async function createPoll(
           creator_id,
           question,
           end_time,
-          is_active,
-          tx_hash
-        ) VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1, ?)`,
+          is_active
+        ) VALUES (?, ?, ?, ?, datetime('now', '+' || ? || ' minutes'), 1)`,
         [
           ctx.chat?.id.toString(), // Using chat ID as guild_id too for simplicity
           ctx.chat?.id.toString(),
@@ -394,8 +393,7 @@ async function createPoll(
                   question,
                   datetime(end_time) as end_time,
                   datetime(created_at) as created_at,
-                  is_active,
-                  tx_hash
+                  is_active
                 FROM polls WHERE id = ?`,
                 [pollId],
                 (err, poll) => {
@@ -517,12 +515,12 @@ async function handleVote(
   // Record or update the vote
   return new Promise((resolve, reject) => {
     const query = existingVote 
-      ? `UPDATE votes SET option_id = ?, tx_hash = ? WHERE poll_id = ? AND user_id = ?`
-      : `INSERT INTO votes (poll_id, option_id, user_id, tx_hash) VALUES (?, ?, ?, ?)`;
+      ? `UPDATE votes SET option_id = ? WHERE poll_id = ? AND user_id = ?`
+      : `INSERT INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)`;
     
     const params = existingVote
-      ? [(option as any).id, tx_hash, pollId, ctx.from?.id]
-      : [pollId, (option as any).id, ctx.from?.id, tx_hash];
+      ? [(option as any).id, pollId, ctx.from?.id]
+      : [pollId, (option as any).id, ctx.from?.id];
     
     db.run(query, params, (err) => {
       if (err) {
@@ -549,8 +547,7 @@ async function getPollResults(pollId: number): Promise<PollResults> {
         `SELECT 
           question,
           datetime(end_time) as end_time,
-          is_active,
-          tx_hash
+          is_active
         FROM polls 
         WHERE id = ?`,
         [pollId],
@@ -601,31 +598,6 @@ async function getPollResults(pollId: number): Promise<PollResults> {
         }
       );
     });
-  });
-}
-
-// Get user's current vote
-async function getUserVote(
-  pollId: number,
-  userId: string
-): Promise<{ option_text: string; tx_hash?: string } | null> {
-  const db = getDb();
-
-  return new Promise((resolve, reject) => {
-    db.get(
-      `SELECT po.option_text, v.tx_hash
-       FROM votes v
-       JOIN poll_options po ON v.option_id = po.id
-       WHERE v.poll_id = ? AND v.user_id = ?`,
-      [pollId, userId],
-      (err, result) => {
-        if (err) reject(err);
-        else resolve(result ? { 
-          option_text: (result as any).option_text,
-          tx_hash: (result as any).tx_hash
-        } : null);
-      }
-    );
   });
 }
 
@@ -704,9 +676,8 @@ async function getActivePollsForChat(chatId: string): Promise<PollData[]> {
         p.question,
         p.end_time,
         p.created_at,
-        p.is_active,
-        p.tx_hash,
-        GROUP_CONCAT(po.option_text) as options
+        p.is_active
+      GROUP_CONCAT(po.option_text) as options
       FROM polls p
       JOIN poll_options po ON p.id = po.poll_id
       WHERE p.channel_id = ? 
