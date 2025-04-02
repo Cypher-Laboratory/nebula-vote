@@ -89,7 +89,7 @@
 
 //   const question = input[1].trim();
 //   const optionsInput = input[2].split(',').map(opt => opt.trim());
-  
+
 //   // Parse duration (default to 15 minutes if not provided or invalid)
 //   const durationMinutes = input.length > 3 ? parseInt(input[3]) || 15 : 15;
 //   const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
@@ -410,7 +410,8 @@ async function createPoll(
                     } else {
                       resolve({
                         ...poll as PollData,
-                        options
+                        options,
+                        tx_hash
                       });
                     }
                   });
@@ -502,7 +503,7 @@ async function handleVote(
   if (!vote_result) {
     return { success: false, message: 'Failed to record vote on Starknet' };
   }
-  
+
   // Extract the transaction hash from the vote result
   const tx_hash = vote_result.transaction_hash;
 
@@ -513,14 +514,14 @@ async function handleVote(
 
   // Record or update the vote
   return new Promise((resolve, reject) => {
-    const query = existingVote 
+    const query = existingVote
       ? `UPDATE votes SET option_id = ? WHERE poll_id = ? AND user_id = ?`
       : `INSERT INTO votes (poll_id, option_id, user_id) VALUES (?, ?, ?)`;
-    
+
     const params = existingVote
       ? [(option as any).id, pollId, ctx.from?.id]
       : [pollId, (option as any).id, ctx.from?.id];
-    
+
     db.run(query, params, (err) => {
       if (err) {
         reject(err);
@@ -621,11 +622,7 @@ function formatPollResults(results: PollResults): string {
     const endDate = new Date(end_time);
     output += `⏰ Ends at: ${endDate.toLocaleString()}`;
   }
-
-  // Add block explorer link if tx_hash is available
-  if (tx_hash) {
-    output += `\n\n🔍 View on StarkScan: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${tx_hash}`;
-  }
+  output += `\n\n🔍 View on StarkScan: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${tx_hash}`;
 
   return output;
 }
@@ -744,7 +741,7 @@ bot.command('createpoll', async (ctx) => {
 
   const question = input[1].trim();
   const optionsInput = input[2].split(',').map(opt => opt.trim());
-  
+
   // Parse duration (default to 15 minutes if not provided or invalid)
   const durationMinutes = input.length > 3 ? parseInt(input[3]) || 15 : 15;
 
@@ -820,11 +817,11 @@ bot.command('polls', async (ctx) => {
   try {
     const chatId = ctx.chat.id.toString();
     const activePolls = await getActivePollsForChat(chatId);
-    
+
     if (activePolls.length === 0) {
       return ctx.reply('No active polls in this chat.');
     }
-    
+
     let message = '📊 <b>Active Polls</b>\n\n';
     for (const poll of activePolls) {
       const endDate = new Date(poll.end_time);
@@ -832,7 +829,7 @@ bot.command('polls', async (ctx) => {
       message += `Question: ${poll.question}\n`;
       message += `Ends at: ${endDate.toLocaleString()}\n\n`;
     }
-    
+
     await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error) {
     console.error('Error fetching active polls:', error);
@@ -847,27 +844,27 @@ bot.on('callback_query', async (ctx) => {
 
   const [, pollId, optionIndex] = callbackData.split(':');
   const userId = ctx.callbackQuery.from.id;
-  
+
   try {
     // Check if poll is active
     const isActive = await isPollActive(Number(pollId));
     if (!isActive) {
       return ctx.answerCbQuery('This poll has expired or is no longer active.');
     }
-    
+
     // Handle the vote
     const voteResult = await handleVote(ctx, Number(pollId), Number(optionIndex));
-    
+
     if (!voteResult.success) {
       return ctx.answerCbQuery(voteResult.message);
     }
 
     // Get updated poll results
     const pollResults = await getPollResults(Number(pollId));
-    
+
     // Get all poll options for the keyboard
     const pollOptions = pollResults.options.map(opt => opt.option_text);
-    
+
     // Create updated inline keyboard
     const keyboard = {
       inline_keyboard: pollOptions.map((option, index) => ([{
@@ -890,9 +887,9 @@ bot.on('callback_query', async (ctx) => {
     if (voteResult.tx_hash) {
       message += `\nView transaction: https://${process.env.TESTNET === 'true' ? 'sepolia.' : ''}starkscan.co/tx/${voteResult.tx_hash}`;
     }
-    
+
     await ctx.answerCbQuery(message);
-    
+
   } catch (error) {
     console.error('Error handling vote:', error);
     await ctx.answerCbQuery('An error occurred while processing your vote.');
@@ -922,14 +919,14 @@ bot.catch((err, ctx) => {
 // Add a function to clean up expired polls (can be run periodically with a cron job)
 export async function cleanupExpiredPolls(): Promise<number> {
   const db = getDb();
-  
+
   return new Promise((resolve, reject) => {
     db.run(
       `UPDATE polls 
       SET is_active = 0 
       WHERE is_active = 1 
       AND datetime('now') > datetime(end_time)`,
-      function(err) {
+      function (err) {
         if (err) reject(err);
         else resolve(this.changes);
       }
