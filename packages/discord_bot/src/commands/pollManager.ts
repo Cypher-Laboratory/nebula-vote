@@ -303,9 +303,7 @@ async function createPollEmbed(
   const embed = new EmbedBuilder()
     .setTitle(question)
     .setDescription(
-      (userVote
-        ? `Click a button below to vote!\n\n👉 Your current vote: **${userVote}**`
-        : 'Click a button below to vote!') + `\n[View on StarkScan](${pollUrl})`
+      `Click a button below to vote! \n[View on StarkScan](${pollUrl})`
     )
     .setColor(isActive ? '#E175B1' : '#EC796B');
 
@@ -513,9 +511,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       const resultsEmbed = new EmbedBuilder()
         .setTitle('Current Results')
         .setDescription(
-          userVote
-            ? `${formatResults(results as any[])}\n\n👉 Your current vote: **${userVote}**`
-            : formatResults(results as any[])
+          formatResults(results as any[])
         )
         .setColor('#E175B1')
         .setFooter({
