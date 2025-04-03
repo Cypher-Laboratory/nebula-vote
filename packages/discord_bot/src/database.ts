@@ -45,13 +45,26 @@ export function initializeDatabase(): void {
       )
     `);
 
-    // save the user's public keys to create future rings
+    // Save the user's public keys to create future rings
     db.run(`
       CREATE TABLE IF NOT EXISTS user_pub_keys (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
         public_key TEXT NOT NULL,
         UNIQUE(user_id)
+      )
+    `);
+    
+    // Create voting cooldown table to prevent spam
+    db.run(`
+      CREATE TABLE IF NOT EXISTS is_voting (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        poll_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        transaction_status TEXT DEFAULT 'pending',
+        FOREIGN KEY (poll_id) REFERENCES polls (id),
+        UNIQUE(poll_id, user_id)
       )
     `);
   });
@@ -62,4 +75,3 @@ export function initializeDatabase(): void {
 export function getDb(): Database {
   return db;
 }
-

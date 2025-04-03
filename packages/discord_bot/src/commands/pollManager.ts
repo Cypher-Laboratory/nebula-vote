@@ -345,7 +345,6 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
     const [action, pollId, optionIndex] = interaction.customId.split('_');
 
     // Acknowledge the interaction immediately to prevent timeout
-    // This gives you up to 15 minutes to process and edit the response
     await interaction.deferReply({ ephemeral: true });
 
     const db = getDb();
@@ -362,8 +361,15 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       );
     });
 
+    if (!poll || !(poll as any).is_active) {
+      await interaction.editReply({
+        content: 'This poll has ended.'
+      });
+      return;
+    }
+
     if (action === 'vote') {
-      // ensure user didn't vote already
+      // Check if user already voted for this poll
       const userVoted = await new Promise((resolve, reject) => {
         db.get(
           'SELECT * FROM votes WHERE poll_id = ? AND user_id = ?',
@@ -380,7 +386,46 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
           content: 'You already voted for this poll.'
         });
         return;
-      };
+      }
+
+      // Check if user is currently in voting cooldown period
+      const isVoting = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT *, 
+           datetime(timestamp, '+5 minutes') > datetime('now') AS in_cooldown,
+           datetime(timestamp, '+3 minutes') > datetime('now') AS in_retry_cooldown
+           FROM is_voting 
+           WHERE poll_id = ? AND user_id = ?`,
+          [pollId, interaction.user.id],
+          (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          }
+        );
+      });
+
+      if (isVoting) {
+        const votingStatus = (isVoting as any).transaction_status;
+        const inCooldown = (isVoting as any).in_cooldown;
+        const inRetryCooldown = (isVoting as any).in_retry_cooldown;
+
+        if (votingStatus === 'pending' && inCooldown) {
+          // User is still in cooldown period for pending transaction
+          await interaction.editReply({
+            content: '⏳ Your previous vote is still being processed. Please wait before trying again.'
+          });
+          return;
+        } else if (votingStatus === 'failed' && inRetryCooldown) {
+          // User is in retry cooldown for a failed transaction
+          await interaction.editReply({
+            content: '⚠️ Your previous vote attempt failed. You can try again in a few minutes.'
+          });
+          return;
+        }
+        
+        // Otherwise, either the cooldown has expired or the previous vote had a definitive status
+        // We'll update the record with a new timestamp
+      }
 
       // Rate limit check
       const canVote = await checkVoteRateLimit(interaction.user.id);
@@ -395,7 +440,7 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         return;
       }
 
-      // Get the option and record vote
+      // Get the option
       const option = await new Promise((resolve, reject) => {
         db.get(
           `SELECT id, option_text 
@@ -418,6 +463,21 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         return;
       }
 
+      // Add or update the is_voting record
+      await new Promise<void>((resolve, reject) => {
+        db.run(
+          `INSERT INTO is_voting (poll_id, user_id, timestamp, transaction_status) 
+           VALUES (?, ?, datetime('now'), 'pending')
+           ON CONFLICT(poll_id, user_id) 
+           DO UPDATE SET timestamp = datetime('now'), transaction_status = 'pending'`,
+          [pollId, interaction.user.id],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+
       // Let the user know we're processing their vote
       await interaction.editReply({
         content: '⏳ Processing your vote on Starknet (this may take a few moments)...'
@@ -427,12 +487,32 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
       try {
         const signerPriv = getUserPrivateKey(interaction);
         const signerPubKey = (new Curve(CurveName.SECP256K1)).GtoPoint().mult(signerPriv);
-        const vote_result = await vote(Number(pollId) - 1 /* starknet polls id start at 0 and sqlite makes the poll ids start at 1 */, Number(optionIndex), signerPriv, await getRing(Number(interaction.user.id), signerPubKey));
+        const vote_result = await vote(
+          Number(pollId) - 1, // starknet polls id start at 0 and sqlite makes the poll ids start at 1
+          Number(optionIndex), 
+          signerPriv, 
+          await getRing(Number(interaction.user.id), signerPubKey)
+        );
+        
         console.log('vote_result on starknet: ', vote_result);
 
         if (!vote_result) {
+          // Update is_voting status to failed
+          await new Promise<void>((resolve, reject) => {
+            db.run(
+              `UPDATE is_voting 
+               SET transaction_status = 'failed' 
+               WHERE poll_id = ? AND user_id = ?`,
+              [pollId, interaction.user.id],
+              (err) => {
+                if (err) reject(err);
+                else resolve();
+              }
+            );
+          });
+
           await interaction.editReply({
-            content: 'Failed to vote on Starknet.'
+            content: 'Failed to vote on Starknet. You can try again in a few minutes.'
           });
           return;
         }
@@ -448,6 +528,21 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
             }
           );
         });
+
+        // Update is_voting status to completed
+        await new Promise<void>((resolve, reject) => {
+          db.run(
+            `UPDATE is_voting 
+             SET transaction_status = 'completed' 
+             WHERE poll_id = ? AND user_id = ?`,
+            [pollId, interaction.user.id],
+            (err) => {
+              if (err) reject(err);
+              else resolve();
+            }
+          );
+        });
+
         console.log('Vote recorded locally for user:', interaction.user.id);
 
         // Get time left for the poll
@@ -500,8 +595,23 @@ export const handlePollButton = async (interaction: ButtonInteraction) => {
         }
       } catch (error) {
         console.error('Error processing vote on Starknet:', error);
+        
+        // Update is_voting status to failed
+        await new Promise<void>((resolve, reject) => {
+          db.run(
+            `UPDATE is_voting 
+             SET transaction_status = 'failed' 
+             WHERE poll_id = ? AND user_id = ?`,
+            [pollId, interaction.user.id],
+            (err) => {
+              if (err) reject(err);
+              else resolve();
+            }
+          );
+        });
+
         await interaction.editReply({
-          content: 'An error occurred while processing your vote on Starknet. Please try again.'
+          content: 'An error occurred while processing your vote on Starknet. You can try again in a few minutes.'
         });
       }
     } else if (action === 'results') {
