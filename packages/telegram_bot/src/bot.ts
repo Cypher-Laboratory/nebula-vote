@@ -226,18 +226,18 @@ async function handleVote(
 
     if (votingStatus === 'pending' && inCooldown) {
       // User is still in cooldown period for pending transaction
-      return { 
-        success: false, 
-        message: '⏳ Your previous vote is still being processed. Please wait before trying again.' 
+      return {
+        success: false,
+        message: '⏳ Your previous vote is still being processed. Please wait before trying again.'
       };
     } else if (votingStatus === 'failed' && inRetryCooldown) {
       // User is in retry cooldown for a failed transaction
-      return { 
-        success: false, 
-        message: '⚠️ Your previous vote attempt failed. You can try again in a few minutes.' 
+      return {
+        success: false,
+        message: '⚠️ Your previous vote attempt failed. You can try again in a few minutes.'
       };
     }
-    
+
     // Otherwise, either the cooldown has expired or the previous vote had a definitive status
     // We'll update the record with a new timestamp
   }
@@ -319,7 +319,7 @@ async function handleVote(
           }
         );
       });
-      
+
       return { success: false, message: 'Failed to record vote on Starknet' };
     }
 
@@ -361,7 +361,7 @@ async function handleVote(
     };
   } catch (error) {
     console.error('Error processing vote on Starknet:', error);
-    
+
     // Update is_voting status to failed
     await new Promise<void>((resolve, reject) => {
       db.run(
@@ -376,9 +376,9 @@ async function handleVote(
       );
     });
 
-    return { 
-      success: false, 
-      message: 'An error occurred while processing your vote. You can try again in a few minutes.' 
+    return {
+      success: false,
+      message: 'An error occurred while processing your vote. You can try again in a few minutes.'
     };
   }
 }
@@ -884,3 +884,6 @@ bot.on('callback_query', async (ctx) => {
     }
   }
 });
+
+
+export { bot, startTimestamp };
