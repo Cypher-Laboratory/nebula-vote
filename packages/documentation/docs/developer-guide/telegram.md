@@ -37,8 +37,8 @@ The application follows a modular architecture with separate components for:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nebulavote-telegram
-cd nebulavote-telegram
+git clone https://github.com/Cypher-Laboratory/nebula-vote
+cd packages/telegram_bot
 ```
 
 2. Install dependencies:
@@ -360,7 +360,7 @@ By following these guidelines, you can customize the Nebula Vote Telegram bot wh
 For questions, support, or to contribute to the development of Nebula Vote, please:
 
 - Join our [Discord community](https://discord.gg/YpYquYTXsf)
-- Visit our [GitHub repository](https://github.com/yourusername/nebulavote-telegram)
+- Visit our [GitHub repository](https://github.com/Cypher-Laboratory/nebula-vote)
 - Contact us at [contact@cypherlab.org](mailto:contact@cypherlab.org)
 
 ## License

@@ -527,8 +527,7 @@ By following these guidelines, you can customize the NebulaVote bot while mainta
 
 For questions, support, or to contribute to the development of NebulaVote, please:
 
-- Join our [Discord community](https://discord.gg/nebulavote)
-- Visit our [GitHub repository](https://github.com/yourusername/nebulavote)
+- Visit our [GitHub repository](https://github.com/Cypher-Laboratory/nebula-vote)
 - Contact us at [contact@cypherlab.org](mailto:contact@cypherlab.org)
 
 ## License
